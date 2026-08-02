@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.day_service import advance_day
+from app.day_service import sync_nation
 from app.db import get_session
 from app.models import DayReport, Nation, Process
 from app.schemas import NationCreate, ProcessCreate, ProcessMode, ProcessUpdate
@@ -36,16 +36,16 @@ async def get_nation(nation_id: int, session: AsyncSession = Depends(get_session
     return nation
 
 
-@app.post("/nations/{nation_id}/advance-day", response_model=DayReport)
-async def advance_nation_day(
+@app.post("/nations/{nation_id}/sync", response_model=list[DayReport])
+async def sync_nation_days(
     nation_id: int,
     session: AsyncSession = Depends(get_session),
-) -> DayReport:
+) -> list[DayReport]:
     nation = await session.get(Nation, nation_id)
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     try:
-        return await advance_day(session, nation)
+        return await sync_nation(session, nation)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

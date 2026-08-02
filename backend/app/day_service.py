@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.game_rules import WORK_INTENSITY, WORK_OUTPUTS, WorkType
+from app.game_rules import BASE_FOOD_SPENDING, WORK_INTENSITY, WORK_OUTPUTS, WorkType
 from app.models import DayReport, Nation, Process
 
 
@@ -18,7 +18,7 @@ async def advance_day(
         )
     )
     if existing.first() is not None:
-        raise ValueError("A report for today already exists")
+        raise ValueError(f"A report for {report_date.isoformat()} already exists")
 
     result = await session.exec(
         select(Process).where(
@@ -37,7 +37,7 @@ async def advance_day(
         work_type = WorkType(process.work_type)
         workers = process.assigned_workers
         workers_summary[work_type] = workers_summary.get(work_type, 0) + workers
-        food_consumed += workers * WORK_INTENSITY[work_type].value
+        food_consumed += workers * BASE_FOOD_SPENDING * WORK_INTENSITY[work_type].value
         progress_added = 0
 
         if process.mode == "continuous":
@@ -65,7 +65,11 @@ async def advance_day(
         )
 
     idle_workers = nation.population - sum(workers_summary.values())
-    food_consumed += idle_workers * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
+    food_consumed += (
+        idle_workers
+        * BASE_FOOD_SPENDING
+        * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
+    )
 
     available_food = nation.food + produced["food"]
     notes: list[str] = []
@@ -94,3 +98,28 @@ async def advance_day(
     await session.commit()
     await session.refresh(report)
     return report
+
+
+async def sync_nation(
+    session: AsyncSession, nation: Nation, today: date | None = None
+) -> list[DayReport]:
+    today = today or date.today()
+    result = await session.exec(
+        select(DayReport)
+        .where(DayReport.nation_id == nation.id)
+        .order_by(DayReport.report_date.desc())
+        .limit(1)
+    )
+    last_report = result.first()
+    next_report_date = (
+        last_report.report_date + timedelta(days=1)
+        if last_report is not None
+        else nation.start_date
+    )
+    last_completed_date = today - timedelta(days=1)
+
+    reports = []
+    while next_report_date <= last_completed_date:
+        reports.append(await advance_day(session, nation, next_report_date))
+        next_report_date += timedelta(days=1)
+    return reports

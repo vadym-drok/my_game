@@ -1,6 +1,9 @@
 from enum import Enum, StrEnum
 
 
+BASE_FOOD_SPENDING = 1
+
+
 class WorkIntensity(float, Enum):
     BASE = 1
     LIGHT = 1.5

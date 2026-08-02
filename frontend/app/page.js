@@ -17,7 +17,6 @@ export default function Home() {
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
   const [processes, setProcesses] = useState([]);
-  const [report, setReport] = useState(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -37,13 +36,14 @@ export default function Home() {
 
   async function loadNation(id = nationId) {
     try {
+      const reports = await request(`/nations/${id}/sync`, { method: "POST" });
       const data = await request(`/nations/${id}`);
       const activeProcesses = await request(`/nations/${id}/processes`);
       setNationId(String(id));
       window.localStorage.setItem("nationId", String(id));
       setNation(data);
       setProcesses(activeProcesses);
-      setMessage("");
+      setMessage(reports.length ? `Оновлено днів: ${reports.length}` : "");
     } catch (error) {
       setMessage(error.message);
     }
@@ -99,18 +99,6 @@ export default function Home() {
     }
   }
 
-  async function advanceDay() {
-    try {
-      const data = await request(`/nations/${nationId}/advance-day`, {
-        method: "POST",
-      });
-      setReport(data);
-      await loadNation();
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
   return (
     <main>
       <header>
@@ -138,7 +126,6 @@ export default function Home() {
         <>
           <section className="card nation">
             <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2></div>
-            <button onClick={advanceDay}>Завершити сьогоднішній день</button>
             <dl>
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
               <div><dt>Їжа</dt><dd>{nation.food}</dd></div>
@@ -182,8 +169,6 @@ export default function Home() {
               )}
             </section>
           </section>
-
-          {report && <section className="card"><h2>Звіт за {report.report_date}</h2><p>Їжа: +{report.food_produced} / −{report.food_consumed}</p>{report.notes.map((note) => <p key={note} className="message">{note}</p>)}</section>}
         </>
       )}
     </main>

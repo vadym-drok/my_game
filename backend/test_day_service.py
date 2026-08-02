@@ -1,7 +1,7 @@
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 
-from app.day_service import advance_day
+from app.day_service import advance_day, sync_nation
 from app.game_rules import WorkType
 from app.models import Nation, Process
 
@@ -51,6 +51,14 @@ async def check() -> None:
     assert report.food_consumed == 15
     assert nation.food == 5
     assert nation.wood == 5
+
+    delayed_nation = Nation(
+        name="Delayed", population=5, food=10, start_date=date.today() - timedelta(days=1)
+    )
+    delayed_nation.id = 2
+    reports = await sync_nation(FakeSession([]), delayed_nation)
+    assert len(reports) == 1
+    assert reports[0].report_date == date.today() - timedelta(days=1)
 
 
 asyncio.run(check())
