@@ -18,6 +18,12 @@ export default function Home() {
   const [nation, setNation] = useState(null);
   const [processes, setProcesses] = useState([]);
   const [message, setMessage] = useState("");
+  const assignedWorkers = processes
+    .filter((process) => process.status === "active")
+    .reduce((total, process) => total + process.assigned_workers, 0);
+  const availableWorkers = nation
+    ? nation.active_population - assignedWorkers
+    : 0;
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
@@ -126,8 +132,12 @@ export default function Home() {
         <>
           <section className="card nation">
             <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2></div>
-            <dl>
+            <dl className="population">
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
+              <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
+              <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
+            </dl>
+            <dl className="resources">
               <div><dt>Їжа</dt><dd>{nation.food}</dd></div>
               <div><dt>Дерево</dt><dd>{nation.wood}</dd></div>
               <div><dt>Камінь</dt><dd>{nation.stone}</dd></div>
@@ -150,6 +160,10 @@ export default function Home() {
 
             <section className="card">
               <h2>Процеси</h2>
+              <div className="workforce">
+                <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span><span>Вільно: {availableWorkers}</span></div>
+                <progress value={assignedWorkers} max={nation.active_population || 1} />
+              </div>
               {processes.length === 0 ? <p>Ще немає активностей.</p> : (
                 <ul className="processes">
                   {processes.map((process) => (

@@ -2,7 +2,7 @@ import asyncio
 from datetime import date, timedelta
 
 from app.day_service import advance_day, sync_nation
-from app.game_rules import WorkType
+from app.game_rules import WorkType, active_population
 from app.models import Nation, Process
 
 class FakeSession:
@@ -34,6 +34,7 @@ class FakeResult:
 
 
 async def check() -> None:
+    assert active_population(50) == 40
     nation = Nation(name="Test", population=10, food=20, start_date=date.today())
     nation.id = 1
     process = Process(

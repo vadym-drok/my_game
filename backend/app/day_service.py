@@ -3,7 +3,13 @@ from datetime import date, timedelta
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.game_rules import BASE_FOOD_SPENDING, WORK_INTENSITY, WORK_OUTPUTS, WorkType
+from app.game_rules import (
+    BASE_FOOD_SPENDING,
+    WORK_INTENSITY,
+    WORK_OUTPUTS,
+    WorkType,
+    active_population,
+)
 from app.models import DayReport, Nation, Process
 
 
@@ -26,8 +32,10 @@ async def advance_day(
         )
     )
     processes = result.all()
-    if sum(process.assigned_workers for process in processes) > nation.population:
-        raise ValueError("More workers assigned than the nation population")
+    if sum(process.assigned_workers for process in processes) > active_population(
+        nation.population
+    ):
+        raise ValueError("More workers assigned than the active population")
 
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
