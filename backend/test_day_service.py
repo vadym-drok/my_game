@@ -2,8 +2,9 @@ import asyncio
 from datetime import date, timedelta
 
 from app.day_service import advance_day, sync_nation
-from app.game_rules import WorkType, active_population
+from app.game_rules import WorkType
 from app.models import Nation, Process
+from app.settings import active_population
 
 class FakeSession:
     def __init__(self, processes: list[Process]) -> None:

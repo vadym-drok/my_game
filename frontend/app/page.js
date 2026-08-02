@@ -18,6 +18,7 @@ export default function Home() {
   const [nation, setNation] = useState(null);
   const [processes, setProcesses] = useState([]);
   const [message, setMessage] = useState("");
+  const [workerError, setWorkerError] = useState("");
   const assignedWorkers = processes
     .filter((process) => process.status === "active")
     .reduce((total, process) => total + process.assigned_workers, 0);
@@ -75,8 +76,14 @@ export default function Home() {
 
   async function createProcess(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const mode = form.get("mode");
+    const workers = Number(form.get("workers"));
+    if (workers > availableWorkers) {
+      setWorkerError(`Доступно лише ${availableWorkers} працівників.`);
+      return;
+    }
     try {
       await request(`/nations/${nationId}/processes`, {
         method: "POST",
@@ -84,12 +91,13 @@ export default function Home() {
           name: form.get("name"),
           work_type: form.get("work_type"),
           mode,
-          assigned_workers: Number(form.get("workers")),
+          assigned_workers: workers,
           required_worker_days:
             mode === "finite" ? Number(form.get("required_worker_days")) : null,
         }),
       });
-      event.currentTarget.reset();
+      formElement.reset();
+      setWorkerError("");
       await loadNation();
     } catch (error) {
       setMessage(error.message);
@@ -132,6 +140,7 @@ export default function Home() {
         <>
           <section className="card nation">
             <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2></div>
+            <p className="start-date"><span>Старт</span>{nation.start_date}</p>
             <dl className="population">
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
               <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
@@ -141,7 +150,6 @@ export default function Home() {
               <div><dt>Їжа</dt><dd>{nation.food}</dd></div>
               <div><dt>Дерево</dt><dd>{nation.wood}</dd></div>
               <div><dt>Камінь</dt><dd>{nation.stone}</dd></div>
-              <div><dt>Старт</dt><dd>{nation.start_date}</dd></div>
             </dl>
           </section>
 
@@ -152,7 +160,8 @@ export default function Home() {
                 <label>Назва<input name="name" required placeholder="Наприклад, лісоруби" /></label>
                 <label>Робота<select name="work_type">{workTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
                 <label>Режим<select name="mode"><option value="continuous">Постійний</option><option value="finite">Кінцевий</option></select></label>
-                <label>Працівники<input name="workers" type="number" min="0" defaultValue="0" /></label>
+                <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
+                {workerError && <p className="field-error" role="alert">{workerError}</p>}
                 <label>Людино-дні для завершення<input name="required_worker_days" type="number" min="1" defaultValue="10" /></label>
                 <button>Запустити</button>
               </form>

@@ -5,9 +5,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import sync_nation
 from app.db import get_session
-from app.game_rules import active_population
 from app.models import DayReport, Nation, Process
 from app.schemas import NationCreate, ProcessCreate, ProcessMode, ProcessUpdate
+from app.settings import active_population
 
 app = FastAPI(title="My Game API")
 app.add_middleware(

@@ -4,13 +4,12 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.game_rules import (
-    BASE_FOOD_SPENDING,
     WORK_INTENSITY,
     WORK_OUTPUTS,
     WorkType,
-    active_population,
 )
 from app.models import DayReport, Nation, Process
+from app.settings import BASE_FOOD_SPENDING, active_population
 
 
 async def advance_day(
