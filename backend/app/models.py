@@ -4,7 +4,7 @@ from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
-class Settlement(SQLModel, table=True):
+class Nation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
     population: int = 0
@@ -17,10 +17,10 @@ class Settlement(SQLModel, table=True):
 
 
 class DayReport(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("settlement_id", "report_date"),)
+    __table_args__ = (UniqueConstraint("nation_id", "report_date"),)
 
     id: int | None = Field(default=None, primary_key=True)
-    settlement_id: int = Field(foreign_key="settlement.id", index=True)
+    nation_id: int = Field(foreign_key="nation.id", index=True)
     report_date: date
     population: int
     food: float
@@ -40,7 +40,7 @@ class DayReport(SQLModel, table=True):
 
 class Process(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    settlement_id: int = Field(foreign_key="settlement.id", index=True)
+    nation_id: int = Field(foreign_key="nation.id", index=True)
     name: str
     work_type: str
     mode: str

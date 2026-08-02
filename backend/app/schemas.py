@@ -6,7 +6,7 @@ from app.game_rules import WorkType
 from app.models import Process
 
 
-class SettlementCreate(SQLModel):
+class NationCreate(SQLModel):
     name: str
     population: int = Field(ge=0)
     food: float = Field(default=0, ge=0)

@@ -4,16 +4,16 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.game_rules import WORK_INTENSITY, WORK_OUTPUTS, WorkType
-from app.models import DayReport, Process, Settlement
+from app.models import DayReport, Nation, Process
 
 
 async def advance_day(
-    session: AsyncSession, settlement: Settlement, report_date: date | None = None
+    session: AsyncSession, nation: Nation, report_date: date | None = None
 ) -> DayReport:
     report_date = report_date or date.today()
     existing = await session.exec(
         select(DayReport).where(
-            DayReport.settlement_id == settlement.id,
+            DayReport.nation_id == nation.id,
             DayReport.report_date == report_date,
         )
     )
@@ -22,12 +22,12 @@ async def advance_day(
 
     result = await session.exec(
         select(Process).where(
-            Process.settlement_id == settlement.id, Process.status == "active"
+            Process.nation_id == nation.id, Process.status == "active"
         )
     )
     processes = result.all()
-    if sum(process.assigned_workers for process in processes) > settlement.population:
-        raise ValueError("More workers assigned than the settlement population")
+    if sum(process.assigned_workers for process in processes) > nation.population:
+        raise ValueError("More workers assigned than the nation population")
 
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
@@ -64,32 +64,32 @@ async def advance_day(
             }
         )
 
-    idle_workers = settlement.population - sum(workers_summary.values())
+    idle_workers = nation.population - sum(workers_summary.values())
     food_consumed += idle_workers * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
 
-    available_food = settlement.food + produced["food"]
+    available_food = nation.food + produced["food"]
     notes: list[str] = []
     if available_food < food_consumed:
         notes.append(f"Food shortage: {food_consumed - available_food:g}")
-    settlement.food = max(0, available_food - food_consumed)
-    settlement.wood += produced["wood"]
-    settlement.stone += produced["stone"]
+    nation.food = max(0, available_food - food_consumed)
+    nation.wood += produced["wood"]
+    nation.stone += produced["stone"]
 
     report = DayReport(
-        settlement_id=settlement.id,
+        nation_id=nation.id,
         report_date=report_date,
-        population=settlement.population,
-        food=settlement.food,
-        wood=settlement.wood,
-        stone=settlement.stone,
-        influence=settlement.influence,
+        population=nation.population,
+        food=nation.food,
+        wood=nation.wood,
+        stone=nation.stone,
+        influence=nation.influence,
         food_produced=produced["food"],
         food_consumed=food_consumed,
         workers_summary=workers_summary,
         processes_summary=processes_summary,
         notes=notes,
     )
-    session.add(settlement)
+    session.add(nation)
     session.add(report)
     await session.commit()
     await session.refresh(report)

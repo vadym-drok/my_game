@@ -3,7 +3,7 @@ from datetime import date
 
 from app.day_service import advance_day
 from app.game_rules import WorkType
-from app.models import Process, Settlement
+from app.models import Nation, Process
 
 class FakeSession:
     def __init__(self, processes: list[Process]) -> None:
@@ -34,23 +34,23 @@ class FakeResult:
 
 
 async def check() -> None:
-    settlement = Settlement(name="Test", population=10, food=20, start_date=date.today())
-    settlement.id = 1
+    nation = Nation(name="Test", population=10, food=20, start_date=date.today())
+    nation.id = 1
     process = Process(
         id=1,
-        settlement_id=1,
+        nation_id=1,
         name="Woodcutting",
         work_type=WorkType.WOODCUTTING,
         mode="continuous",
         assigned_workers=5,
     )
-    report = await advance_day(FakeSession([process]), settlement)
+    report = await advance_day(FakeSession([process]), nation)
 
     assert report.report_date == date.today()
     assert report.food_produced == 0
     assert report.food_consumed == 15
-    assert settlement.food == 5
-    assert settlement.wood == 5
+    assert nation.food == 5
+    assert nation.wood == 5
 
 
 asyncio.run(check())
