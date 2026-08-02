@@ -12,6 +12,30 @@ from app.models import DayReport, Nation, Process
 from app.settings import BASE_FOOD_SPENDING, active_population
 
 
+def daily_resource_flow(nation: Nation, processes: list[Process]) -> dict[str, dict[str, float]]:
+    income = {"food": 0, "wood": 0, "stone": 0}
+    food_spending = 0.0
+    assigned_workers = 0
+    for process in processes:
+        work_type = WorkType(process.work_type)
+        workers = process.assigned_workers
+        assigned_workers += workers
+        food_spending += workers * BASE_FOOD_SPENDING * WORK_INTENSITY[work_type].value
+        if process.mode == "continuous":
+            for resource, amount in WORK_OUTPUTS.get(work_type, {}).items():
+                income[resource] += workers * amount
+
+    food_spending += (
+        (nation.population - assigned_workers)
+        * BASE_FOOD_SPENDING
+        * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
+    )
+    return {
+        resource: {"spending": food_spending if resource == "food" else 0, "income": amount}
+        for resource, amount in income.items()
+    }
+
+
 async def advance_day(
     session: AsyncSession, nation: Nation, report_date: date | None = None
 ) -> DayReport:
@@ -36,21 +60,16 @@ async def advance_day(
     ):
         raise ValueError("More workers assigned than the active population")
 
+    resource_flow = daily_resource_flow(nation, processes)
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
-    produced = {"food": 0, "wood": 0, "stone": 0}
-    food_consumed = 0.0
     for process in processes:
         work_type = WorkType(process.work_type)
         workers = process.assigned_workers
         workers_summary[work_type] = workers_summary.get(work_type, 0) + workers
-        food_consumed += workers * BASE_FOOD_SPENDING * WORK_INTENSITY[work_type].value
         progress_added = 0
 
-        if process.mode == "continuous":
-            for resource, amount in WORK_OUTPUTS.get(work_type, {}).items():
-                produced[resource] += workers * amount
-        else:
+        if process.mode == "finite":
             assert process.required_worker_days is not None
             progress_added = min(
                 workers, process.required_worker_days - process.completed_worker_days
@@ -71,20 +90,14 @@ async def advance_day(
             }
         )
 
-    idle_workers = nation.population - sum(workers_summary.values())
-    food_consumed += (
-        idle_workers
-        * BASE_FOOD_SPENDING
-        * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
-    )
-
-    available_food = nation.food + produced["food"]
+    available_food = nation.food + resource_flow["food"]["income"]
+    food_consumed = resource_flow["food"]["spending"]
     notes: list[str] = []
     if available_food < food_consumed:
         notes.append(f"Food shortage: {food_consumed - available_food:g}")
     nation.food = max(0, available_food - food_consumed)
-    nation.wood += produced["wood"]
-    nation.stone += produced["stone"]
+    nation.wood += resource_flow["wood"]["income"]
+    nation.stone += resource_flow["stone"]["income"]
 
     report = DayReport(
         nation_id=nation.id,
@@ -94,7 +107,7 @@ async def advance_day(
         wood=nation.wood,
         stone=nation.stone,
         influence=nation.influence,
-        food_produced=produced["food"],
+        food_produced=resource_flow["food"]["income"],
         food_consumed=food_consumed,
         workers_summary=workers_summary,
         processes_summary=processes_summary,

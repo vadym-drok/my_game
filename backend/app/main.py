@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.day_service import sync_nation
+from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
 from app.models import DayReport, Nation, Process
 from app.schemas import NationCreate, ProcessCreate, ProcessMode, ProcessUpdate
@@ -37,9 +37,15 @@ async def get_nation(
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     active = active_population(nation.population)
+    result = await session.exec(
+        select(Process).where(
+            Process.nation_id == nation_id, Process.status == "active"
+        )
+    )
     return nation.model_dump() | {
         "active_population": active,
         "passive_population": nation.population - active,
+        "daily_resources": daily_resource_flow(nation, list(result.all())),
     }
 
 

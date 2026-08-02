@@ -12,6 +12,7 @@ const workTypes = [
   "building",
   "investigation",
 ];
+const resources = [["food", "Їжа"], ["wood", "Дерево"], ["stone", "Камінь"]];
 
 export default function Home() {
   const [nationId, setNationId] = useState("");
@@ -147,9 +148,12 @@ export default function Home() {
               <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
             </dl>
             <dl className="resources">
-              <div><dt>Їжа</dt><dd>{nation.food}</dd></div>
-              <div><dt>Дерево</dt><dd>{nation.wood}</dd></div>
-              <div><dt>Камінь</dt><dd>{nation.stone}</dd></div>
+              <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span></div>
+              {resources.map(([resource, label]) => (
+                <div className="resource-row" key={resource}>
+                  <dt>{label}</dt><dd>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span>
+                </div>
+              ))}
             </dl>
           </section>
 

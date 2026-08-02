@@ -1,7 +1,7 @@
 import asyncio
 from datetime import date, timedelta
 
-from app.day_service import advance_day, sync_nation
+from app.day_service import advance_day, daily_resource_flow, sync_nation
 from app.game_rules import WorkType
 from app.models import Nation, Process
 from app.settings import active_population
@@ -46,6 +46,9 @@ async def check() -> None:
         mode="continuous",
         assigned_workers=5,
     )
+    flow = daily_resource_flow(nation, [process])
+    assert flow["food"] == {"spending": 15, "income": 0}
+    assert flow["wood"] == {"spending": 0, "income": 5}
     report = await advance_day(FakeSession([process]), nation)
 
     assert report.report_date == date.today()
