@@ -1,10 +1,14 @@
 import asyncio
+from datetime import date
 
 from app.day_service import advance_day
 from app.game_rules import WorkType
-from app.models import Settlement
+from app.models import Process, Settlement
 
 class FakeSession:
+    def __init__(self, processes: list[Process]) -> None:
+        self.processes = processes
+
     def add(self, _: object) -> None:
         pass
 
@@ -14,18 +18,39 @@ class FakeSession:
     async def refresh(self, _: object) -> None:
         pass
 
+    async def exec(self, _: object) -> "FakeResult":
+        return FakeResult(self.processes)
+
+
+class FakeResult:
+    def __init__(self, processes: list[Process]) -> None:
+        self.processes = processes
+
+    def first(self) -> None:
+        return None
+
+    def all(self) -> list:
+        return self.processes
+
 
 async def check() -> None:
-    settlement = Settlement(name="Test", population=10, food=20)
+    settlement = Settlement(name="Test", population=10, food=20, start_date=date.today())
     settlement.id = 1
-    report = await advance_day(
-        FakeSession(), settlement, {WorkType.FOOD_GATHERING: 5}
+    process = Process(
+        id=1,
+        settlement_id=1,
+        name="Woodcutting",
+        work_type=WorkType.WOODCUTTING,
+        mode="continuous",
+        assigned_workers=5,
     )
+    report = await advance_day(FakeSession([process]), settlement)
 
-    assert report.day_number == 1
-    assert report.food_produced == 10
-    assert report.food_consumed == 10
-    assert settlement.food == 20
+    assert report.report_date == date.today()
+    assert report.food_produced == 0
+    assert report.food_consumed == 15
+    assert settlement.food == 5
+    assert settlement.wood == 5
 
 
 asyncio.run(check())

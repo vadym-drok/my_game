@@ -1,4 +1,6 @@
-from sqlalchemy import JSON, Column
+from datetime import date
+
+from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -6,7 +8,7 @@ class Settlement(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
     population: int = 0
-    current_day: int = 0
+    start_date: date = Field(default_factory=date.today)
     food: float = 0
     wood: int = 0
     stone: int = 0
@@ -15,9 +17,11 @@ class Settlement(SQLModel, table=True):
 
 
 class DayReport(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("settlement_id", "report_date"),)
+
     id: int | None = Field(default=None, primary_key=True)
     settlement_id: int = Field(foreign_key="settlement.id", index=True)
-    day_number: int
+    report_date: date
     population: int
     food: float
     wood: int
@@ -28,4 +32,22 @@ class DayReport(SQLModel, table=True):
     workers_summary: dict[str, int] = Field(
         default_factory=dict, sa_column=Column(JSON, nullable=False)
     )
+    processes_summary: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
     notes: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+
+
+class Process(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    settlement_id: int = Field(foreign_key="settlement.id", index=True)
+    name: str
+    work_type: str
+    mode: str
+    status: str = "active"
+    assigned_workers: int = 0
+    required_worker_days: int | None = None
+    completed_worker_days: int = 0
+    started_at: date = Field(default_factory=date.today)
+    completed_at: date | None = None
+    details: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))

@@ -1,6 +1,9 @@
+from enum import StrEnum
+
 from sqlmodel import Field, SQLModel
 
 from app.game_rules import WorkType
+from app.models import Process
 
 
 class SettlementCreate(SQLModel):
@@ -13,5 +16,27 @@ class SettlementCreate(SQLModel):
     housing_capacity: int = Field(default=0, ge=0)
 
 
-class DayAdvance(SQLModel):
-    assignments: dict[WorkType, int] = Field(default_factory=dict)
+class ProcessMode(StrEnum):
+    CONTINUOUS = "continuous"
+    FINITE = "finite"
+
+
+class ProcessStatus(StrEnum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class ProcessCreate(SQLModel):
+    name: str
+    work_type: WorkType
+    mode: ProcessMode
+    assigned_workers: int = Field(default=0, ge=0)
+    required_worker_days: int | None = Field(default=None, ge=1)
+    details: dict = Field(default_factory=dict)
+
+
+class ProcessUpdate(SQLModel):
+    assigned_workers: int | None = Field(default=None, ge=0)
+    status: ProcessStatus | None = None

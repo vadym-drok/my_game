@@ -1,36 +1,38 @@
-from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum, StrEnum
 
 
-class WorkIntensity(StrEnum):
-    LIGHT = "light"
-    MEDIUM = "medium"
-    HEAVY = "heavy"
+class WorkIntensity(float, Enum):
+    BASE = 1
+    LIGHT = 1.5
+    STANDARD = 2
+    MEDIUM = 2.5
+    HEAVY = 3
 
 
 class WorkType(StrEnum):
-    FOOD_GATHERING = "food_gathering"
     HUNTING = "hunting"
+    FOOD_GATHERING = "food_gathering"
+    FISHING = "fishing"
     WOODCUTTING = "woodcutting"
     BUILDING = "building"
+    INVESTIGATION = "investigation"
+    MINING = "mining"
 
 
-@dataclass(frozen=True)
-class WorkInfo:
-    intensity: WorkIntensity
-    food_per_worker: float = 0
-    wood_per_worker: int = 0
-
-
-FOOD_MULTIPLIERS = {
-    WorkIntensity.LIGHT: 1.0,
-    WorkIntensity.MEDIUM: 1.25,
-    WorkIntensity.HEAVY: 1.5,
+WORK_INTENSITY = {
+    WorkType.HUNTING: WorkIntensity.BASE,
+    WorkType.FOOD_GATHERING: WorkIntensity.BASE,
+    WorkType.FISHING: WorkIntensity.BASE,
+    WorkType.WOODCUTTING: WorkIntensity.STANDARD,
+    WorkType.BUILDING: WorkIntensity.LIGHT,
+    WorkType.INVESTIGATION: WorkIntensity.STANDARD,
+    WorkType.MINING: WorkIntensity.HEAVY,
 }
 
-WORKS = {
-    WorkType.FOOD_GATHERING: WorkInfo(WorkIntensity.LIGHT, food_per_worker=2),
-    WorkType.HUNTING: WorkInfo(WorkIntensity.MEDIUM, food_per_worker=3),
-    WorkType.WOODCUTTING: WorkInfo(WorkIntensity.HEAVY, wood_per_worker=1),
-    WorkType.BUILDING: WorkInfo(WorkIntensity.MEDIUM),
+WORK_OUTPUTS = {
+    WorkType.HUNTING: {"food": 3},
+    WorkType.FOOD_GATHERING: {"food": 2},
+    WorkType.FISHING: {"food": 3},
+    WorkType.WOODCUTTING: {"wood": 1},
+    WorkType.MINING: {"stone": 1},
 }
