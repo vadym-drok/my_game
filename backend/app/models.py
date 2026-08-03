@@ -10,6 +10,8 @@ class Nation(SQLModel, table=True):
     population: int = 0
     start_date: date = Field(default_factory=date.today)
     last_population_growth_date: date | None = None
+    population_growth_progress: int = 0
+    consecutive_hunger_days: int = 0
     food: float = 0
     wood: int = 0
     stone: int = 0
@@ -30,6 +32,8 @@ class DayReport(SQLModel, table=True):
     influence: int
     food_produced: float
     food_consumed: float
+    food_shortage: float = 0
+    is_hungry: bool = False
     workers_summary: dict[str, int] = Field(
         default_factory=dict, sa_column=Column(JSON, nullable=False)
     )

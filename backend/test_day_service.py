@@ -38,8 +38,9 @@ class FakeResult:
 async def check() -> None:
     assert active_population(50) == 40
     growth_nation = Nation(name="Growth", start_date=date(2026, 8, 2), population=50)
-    assert not population_growth_available(growth_nation, date(2026, 8, 6))
-    assert population_growth_available(growth_nation, date(2026, 8, 7))
+    assert not population_growth_available(growth_nation)
+    growth_nation.population_growth_progress = 5
+    assert population_growth_available(growth_nation)
     assert population_growth_limit(growth_nation.population) == 5
     nation = Nation(name="Test", population=10, food=20, start_date=date.today())
     nation.id = 1
@@ -61,6 +62,16 @@ async def check() -> None:
     assert report.food_consumed == 15
     assert nation.food == 5
     assert nation.wood == 5
+    assert nation.population_growth_progress == 1
+
+    hungry_nation = Nation(name="Hungry", population=10, start_date=date.today())
+    hungry_nation.id = 3
+    hungry_report = await advance_day(FakeSession([]), hungry_nation)
+    assert hungry_nation.food == 0
+    assert hungry_nation.consecutive_hunger_days == 1
+    assert hungry_nation.population_growth_progress == 0
+    assert hungry_report.is_hungry
+    assert hungry_report.food_shortage == 10
 
     delayed_nation = Nation(
         name="Delayed", population=5, food=10, start_date=date.today() - timedelta(days=1)

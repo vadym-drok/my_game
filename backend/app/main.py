@@ -16,7 +16,11 @@ from app.schemas import (
     ProcessMode,
     ProcessUpdate,
 )
-from app.settings import active_population
+from app.settings import (
+    HUNGER_STAGE_ONE_DAYS,
+    POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
+    active_population,
+)
 
 app = FastAPI(title="My Game API")
 app.add_middleware(
@@ -59,6 +63,13 @@ async def get_nation(
         "population_growth": {
             "available": population_growth_available(nation),
             "max_increase": population_growth_limit(nation.population),
+            "progress_days": nation.population_growth_progress,
+            "required_days": POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
+        },
+        "hunger": {
+            "active": nation.consecutive_hunger_days > 0,
+            "days": nation.consecutive_hunger_days,
+            "stage_days": HUNGER_STAGE_ONE_DAYS,
         },
     }
 
@@ -92,6 +103,7 @@ async def apply_population_growth(
         raise HTTPException(status_code=422, detail="Population growth limit exceeded")
     nation.population += data.amount
     nation.last_population_growth_date = date.today()
+    nation.population_growth_progress = 0
     session.add(nation)
     await session.commit()
     await session.refresh(nation)

@@ -9,7 +9,11 @@ from app.game_rules import (
     WorkType,
 )
 from app.models import DayReport, Nation, Process
-from app.settings import BASE_FOOD_SPENDING, active_population
+from app.settings import (
+    BASE_FOOD_SPENDING,
+    POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
+    active_population,
+)
 
 
 def daily_resource_flow(nation: Nation, processes: list[Process]) -> dict[str, dict[str, float]]:
@@ -93,11 +97,22 @@ async def advance_day(
     available_food = nation.food + resource_flow["food"]["income"]
     food_consumed = resource_flow["food"]["spending"]
     notes: list[str] = []
-    if available_food < food_consumed:
-        notes.append(f"Food shortage: {food_consumed - available_food:g}")
+    food_shortage = max(0, food_consumed - available_food)
+    is_hungry = food_shortage > 0
+    if is_hungry:
+        notes.append(f"Food shortage: {food_shortage:g}")
     nation.food = max(0, available_food - food_consumed)
-    nation.wood += resource_flow["wood"]["income"]
-    nation.stone += resource_flow["stone"]["income"]
+    nation.wood = max(0, nation.wood + resource_flow["wood"]["income"])
+    nation.stone = max(0, nation.stone + resource_flow["stone"]["income"])
+    if is_hungry:
+        nation.consecutive_hunger_days += 1
+        nation.population_growth_progress = 0
+    else:
+        nation.consecutive_hunger_days = 0
+        nation.population_growth_progress = min(
+            nation.population_growth_progress + 1,
+            POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
+        )
 
     report = DayReport(
         nation_id=nation.id,
@@ -109,6 +124,8 @@ async def advance_day(
         influence=nation.influence,
         food_produced=resource_flow["food"]["income"],
         food_consumed=food_consumed,
+        food_shortage=food_shortage,
+        is_hungry=is_hungry,
         workers_summary=workers_summary,
         processes_summary=processes_summary,
         notes=notes,

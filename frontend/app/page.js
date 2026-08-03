@@ -36,6 +36,11 @@ export default function Home() {
     : 0;
   const currentProcesses = processes.filter((process) => process.status === "active");
   const historyProcesses = processes.filter((process) => process.status !== "active");
+  const growthButtonText = nation?.hunger.active
+    ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
+    : nation?.population_growth.available
+      ? `Зростання населення (+${nation.population_growth.max_increase})`
+      : `Зростання населення: ${nation?.population_growth.progress_days}/${nation?.population_growth.required_days}`;
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
@@ -165,7 +170,7 @@ export default function Home() {
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2>{nation.population_growth.available && <button className="growth-button" onClick={() => setGrowthModalOpen(true)}>Зростання населення (+{nation.population_growth.max_increase})</button>}</div>
+            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={() => setGrowthModalOpen(true)}>{growthButtonText}</button></div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
@@ -176,7 +181,7 @@ export default function Home() {
               <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span></div>
               {resources.map(([resource, label]) => (
                 <div className="resource-row" key={resource}>
-                  <dt>{label}</dt><dd>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span>
+                  <dt>{label}</dt><dd className={resource === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span>
                 </div>
               ))}
             </dl>
@@ -240,7 +245,7 @@ export default function Home() {
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
               <h2>Зростання населення</h2>
-              <p>Доступно до +{nation.population_growth.max_increase} осіб.</p>
+              <p>Доступно до +{nation.population_growth.max_increase} осіб. Здорових днів: {nation.population_growth.progress_days}/{nation.population_growth.required_days}.</p>
               <label>Додати населення<input type="number" min="0" max={nation.population_growth.max_increase} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
               <div><button type="button" onClick={() => setGrowthModalOpen(false)}>Скасувати</button><button>Підтвердити</button></div>
             </form>
