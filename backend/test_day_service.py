@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from app.day_service import advance_day, daily_resource_flow, sync_nation
 from app.game_rules import WorkType
 from app.models import Nation, Process
+from app.population_growth import population_growth_available, population_growth_limit
 from app.settings import active_population
 
 class FakeSession:
@@ -36,6 +37,10 @@ class FakeResult:
 
 async def check() -> None:
     assert active_population(50) == 40
+    growth_nation = Nation(name="Growth", start_date=date(2026, 8, 2), population=50)
+    assert not population_growth_available(growth_nation, date(2026, 8, 6))
+    assert population_growth_available(growth_nation, date(2026, 8, 7))
+    assert population_growth_limit(growth_nation.population) == 5
     nation = Nation(name="Test", population=10, food=20, start_date=date.today())
     nation.id = 1
     process = Process(

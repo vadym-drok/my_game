@@ -8,7 +8,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
 from app.models import DayReport, Nation, Process
-from app.schemas import NationCreate, ProcessCreate, ProcessMode, ProcessUpdate
+from app.population_growth import population_growth_available, population_growth_limit
+from app.schemas import (
+    NationCreate,
+    PopulationGrowth,
+    ProcessCreate,
+    ProcessMode,
+    ProcessUpdate,
+)
 from app.settings import active_population
 
 app = FastAPI(title="My Game API")
@@ -49,6 +56,10 @@ async def get_nation(
         "active_population": active,
         "passive_population": nation.population - active,
         "daily_resources": daily_resource_flow(nation, list(result.all())),
+        "population_growth": {
+            "available": population_growth_available(nation),
+            "max_increase": population_growth_limit(nation.population),
+        },
     }
 
 
@@ -64,6 +75,27 @@ async def sync_nation_days(
         return await sync_nation(session, nation)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/nations/{nation_id}/population-growth", response_model=Nation)
+async def apply_population_growth(
+    nation_id: int,
+    data: PopulationGrowth,
+    session: AsyncSession = Depends(get_session),
+) -> Nation:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    if not population_growth_available(nation):
+        raise HTTPException(status_code=422, detail="Population growth is not available")
+    if data.amount > population_growth_limit(nation.population):
+        raise HTTPException(status_code=422, detail="Population growth limit exceeded")
+    nation.population += data.amount
+    nation.last_population_growth_date = date.today()
+    session.add(nation)
+    await session.commit()
+    await session.refresh(nation)
+    return nation
 
 
 @app.post("/nations/{nation_id}/processes", response_model=Process)

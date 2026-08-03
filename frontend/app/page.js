@@ -26,6 +26,8 @@ export default function Home() {
   const [processes, setProcesses] = useState([]);
   const [message, setMessage] = useState("");
   const [workerError, setWorkerError] = useState("");
+  const [growthModalOpen, setGrowthModalOpen] = useState(false);
+  const [growthAmount, setGrowthAmount] = useState(0);
   const assignedWorkers = processes
     .filter((process) => process.status === "active")
     .reduce((total, process) => total + process.assigned_workers, 0);
@@ -122,6 +124,21 @@ export default function Home() {
     }
   }
 
+  async function applyPopulationGrowth(event) {
+    event.preventDefault();
+    try {
+      await request(`/nations/${nationId}/population-growth`, {
+        method: "POST",
+        body: JSON.stringify({ amount: Number(growthAmount) }),
+      });
+      setGrowthModalOpen(false);
+      setGrowthAmount(0);
+      await loadNation();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -148,7 +165,7 @@ export default function Home() {
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2></div>
+            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2>{nation.population_growth.available && <button className="growth-button" onClick={() => setGrowthModalOpen(true)}>Зростання населення (+{nation.population_growth.max_increase})</button>}</div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
@@ -219,6 +236,15 @@ export default function Home() {
               </section>
             </div>
           </section>
+
+          {growthModalOpen && <div className="modal-backdrop">
+            <form className="modal" onSubmit={applyPopulationGrowth}>
+              <h2>Зростання населення</h2>
+              <p>Доступно до +{nation.population_growth.max_increase} осіб.</p>
+              <label>Додати населення<input type="number" min="0" max={nation.population_growth.max_increase} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
+              <div><button type="button" onClick={() => setGrowthModalOpen(false)}>Скасувати</button><button>Підтвердити</button></div>
+            </form>
+          </div>}
         </>
       )}
     </main>

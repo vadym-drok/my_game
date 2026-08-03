@@ -9,6 +9,7 @@ class Nation(SQLModel, table=True):
     name: str
     population: int = 0
     start_date: date = Field(default_factory=date.today)
+    last_population_growth_date: date | None = None
     food: float = 0
     wood: int = 0
     stone: int = 0

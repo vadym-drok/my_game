@@ -41,3 +41,7 @@ class ProcessCreate(SQLModel):
 class ProcessUpdate(SQLModel):
     assigned_workers: int | None = Field(default=None, ge=0)
     status: ProcessStatus | None = None
+
+
+class PopulationGrowth(SQLModel):
+    amount: int = Field(ge=0)
