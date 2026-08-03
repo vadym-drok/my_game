@@ -30,6 +30,7 @@ export default function Home() {
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
   const [resourceAmounts, setResourceAmounts] = useState({});
+  const [processMode, setProcessMode] = useState("continuous");
   const assignedWorkers = processes
     .filter((process) => process.status === "active")
     .reduce((total, process) => total + process.assigned_workers, 0);
@@ -118,6 +119,7 @@ export default function Home() {
         }),
       });
       formElement.reset();
+      setProcessMode("continuous");
       setWorkerError("");
       await loadNation();
     } catch (error) {
@@ -216,10 +218,10 @@ export default function Home() {
               <form onSubmit={createProcess}>
                 <label>Назва<input name="name" required placeholder="Наприклад, лісоруби" /></label>
                 <label>Робота<select name="work_type">{workTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-                <label>Режим<select name="mode"><option value="continuous">Постійний</option><option value="finite">Кінцевий</option></select></label>
+                <label>Режим<select name="mode" value={processMode} onChange={(event) => setProcessMode(event.target.value)}><option value="continuous">Постійний</option><option value="finite">Кінцевий</option></select></label>
                 <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
                 {workerError && <p className="field-error" role="alert">{workerError}</p>}
-                <label>Людино-дні для завершення<input name="required_worker_days" type="number" min="1" defaultValue="10" /></label>
+                {processMode === "finite" && <label>Людино-дні для завершення<input name="required_worker_days" type="number" min="1" defaultValue="10" required /></label>}
                 <button>Запустити</button>
               </form>
             </section>
