@@ -3,12 +3,8 @@ from datetime import date, timedelta
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.game_rules import (
-    WORK_INTENSITY,
-    WORK_OUTPUTS,
-    WorkType,
-)
-from app.models import DayReport, Nation, NationLog, Process
+from app.game_rules import WorkIntensity
+from app.models import DayReport, Nation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.settings import (
     BASE_FOOD_SPENDING,
     DAY_PROGRESS_MODE,
@@ -19,27 +15,32 @@ from app.settings import (
 )
 
 
-def daily_resource_flow(nation: Nation, processes: list[Process]) -> dict[str, dict[str, float]]:
-    income = {"general_points": 0, "food": 0, "wood": 0, "stone": 0}
+def daily_resource_flow(
+    nation: Nation,
+    processes: list[Process],
+    resource_amounts: dict[str, float],
+    work_types: dict[str, WorkTypeDefinition],
+) -> dict[str, dict[str, float]]:
+    income = {code: 0 for code in resource_amounts}
     food_spending = 0.0
     assigned_workers = 0
     for process in processes:
-        work_type = WorkType(process.work_type)
+        work_type = work_types[process.work_type]
         workers = process.assigned_workers
         assigned_workers += workers
-        food_spending += workers * BASE_FOOD_SPENDING * WORK_INTENSITY[work_type].value
+        food_spending += workers * BASE_FOOD_SPENDING * work_type.intensity.coefficient
         if process.mode == "continuous":
-            for resource, amount in WORK_OUTPUTS.get(work_type, {}).items():
-                income[resource] += workers * amount
+            for resource, amount in work_type.outputs.items():
+                income[resource] = income.get(resource, 0) + workers * amount
 
     food_spending += (
         (nation.population - assigned_workers)
         * BASE_FOOD_SPENDING
-        * WORK_INTENSITY[WorkType.FOOD_GATHERING].value
+        * WorkIntensity.BASE.coefficient
     )
     return {
-        resource: {"spending": food_spending if resource == "food" else 0, "income": amount}
-        for resource, amount in income.items()
+        code: {"spending": food_spending if code == "food" else 0, "income": amount}
+        for code, amount in income.items()
     }
 
 
@@ -62,18 +63,27 @@ async def advance_day(
         )
     )
     processes = result.all()
+    result = await session.exec(
+        select(NationResource, Resource)
+        .join(Resource, NationResource.resource_id == Resource.id)
+        .where(NationResource.nation_id == nation.id)
+    )
+    resource_rows = result.all()
+    result = await session.exec(select(WorkTypeDefinition))
+    work_types = {work_type.code: work_type for work_type in result.all()}
+    resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
     if sum(process.assigned_workers for process in processes) > active_population(
         nation.population
     ):
         raise ValueError("More workers assigned than the active population")
 
-    resource_flow = daily_resource_flow(nation, processes)
+    resource_flow = daily_resource_flow(nation, processes, resource_amounts, work_types)
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
     for process in processes:
-        work_type = WorkType(process.work_type)
+        work_type = work_types[process.work_type]
         workers = process.assigned_workers
-        workers_summary[work_type] = workers_summary.get(work_type, 0) + workers
+        workers_summary[work_type.code] = workers_summary.get(work_type.code, 0) + workers
         progress_added = 0
 
         if process.mode == "finite":
@@ -89,7 +99,7 @@ async def advance_day(
         processes_summary.append(
             {
                 "process_id": process.id,
-                "work_type": work_type,
+                "work_type": work_type.code,
                 "mode": process.mode,
                 "workers": workers,
                 "progress_added": progress_added,
@@ -97,16 +107,19 @@ async def advance_day(
             }
         )
 
-    available_food = nation.food + resource_flow["food"]["income"]
+    available_food = resource_amounts.get("food", 0) + resource_flow["food"]["income"]
     food_consumed = resource_flow["food"]["spending"]
     notes: list[str] = []
     food_shortage = max(0, food_consumed - available_food)
     is_hungry = food_shortage > 0
     if is_hungry:
         notes.append(f"Food shortage: {food_shortage:g}")
-    nation.food = max(0, available_food - food_consumed)
-    nation.wood = max(0, nation.wood + resource_flow["wood"]["income"])
-    nation.stone = max(0, nation.stone + resource_flow["stone"]["income"])
+    resources_snapshot = {}
+    for nation_resource, resource in resource_rows:
+        flow = resource_flow[resource.code]
+        nation_resource.amount = max(0, nation_resource.amount + flow["income"] - flow["spending"])
+        resources_snapshot[resource.code] = {"amount": nation_resource.amount, **flow}
+        session.add(nation_resource)
     if is_hungry:
         nation.consecutive_hunger_days += 1
         nation.population_growth_progress = 0
@@ -133,15 +146,10 @@ async def advance_day(
         nation_id=nation.id,
         report_date=report_date,
         population=nation.population,
-        food=nation.food,
-        general_points=nation.general_points,
-        wood=nation.wood,
-        stone=nation.stone,
         influence=nation.influence,
-        food_produced=resource_flow["food"]["income"],
-        food_consumed=food_consumed,
         food_shortage=food_shortage,
         is_hungry=is_hungry,
+        resources=resources_snapshot,
         workers_summary=workers_summary,
         processes_summary=processes_summary,
         notes=notes,

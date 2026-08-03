@@ -1,0 +1,39 @@
+{
+  "resources": [
+    {
+      "code": "general_points",
+      "name": "General points",
+      "storage_coefficient": 1
+    },
+    {
+      "code": "food",
+      "name": "Їжа",
+      "storage_coefficient": 1
+    },
+    {
+      "code": "wood",
+      "name": "Дерево",
+      "storage_coefficient": 1
+    },
+    {
+      "code": "stone",
+      "name": "Камінь",
+      "storage_coefficient": 1
+    }
+  ],
+  "work_types": [
+    {"code": "hunting", "name": "Hunting", "intensity": "BASE", "mode": "continuous", "outputs": {"food": 3}},
+    {"code": "food_gathering", "name": "Food gathering", "intensity": "BASE", "mode": "continuous", "outputs": {"food": 2}},
+    {"code": "fishing", "name": "Fishing", "intensity": "BASE", "mode": "continuous", "outputs": {"food": 3}},
+    {"code": "woodcutting", "name": "Woodcutting", "intensity": "STANDARD", "mode": "continuous", "outputs": {"wood": 1}},
+    {"code": "building", "name": "Building", "intensity": "LIGHT", "mode": "finite", "outputs": {}},
+    {"code": "investigation", "name": "Investigation", "intensity": "STANDARD", "mode": "finite", "outputs": {}},
+    {"code": "mining", "name": "Mining", "intensity": "HEAVY", "mode": "continuous", "outputs": {"stone": 1}}
+  ],
+  "nation": {
+    "name": "Октавійці",
+    "population": 50,
+    "influence": 0,
+    "housing_capacity": 0
+  }
+}

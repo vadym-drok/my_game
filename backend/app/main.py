@@ -7,15 +7,14 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
-from app.game_rules import WORK_INTENSITY, WORK_OUTPUTS, WorkType
-from app.models import DayReport, Nation, NationLog, Process
+from app.game_rules import WorkMode
+from app.models import DayReport, Nation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
     PopulationGrowth,
     ResourceAdjustment,
     ProcessCreate,
-    ProcessMode,
     ProcessUpdate,
 )
 from app.settings import (
@@ -26,8 +25,6 @@ from app.settings import (
 )
 
 app = FastAPI(title="My Game API")
-RESOURCE_FIELDS = {"general_points", "food", "wood", "stone"}
-RESOURCE_LABELS = {"general_points": "General points", "food": "Їжа", "wood": "Дерево", "stone": "Камінь"}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3010"],
@@ -36,26 +33,30 @@ app.add_middleware(
 )
 
 
-@app.get("/work-rules")
-async def get_work_rules() -> list[dict]:
-    return [
-        {
-            "work_type": work_type.value,
-            "food_multiplier": WORK_INTENSITY[work_type].value,
-            "outputs": WORK_OUTPUTS.get(work_type, {}),
-        }
-        for work_type in WorkType
-    ]
+@app.get("/work-rules", response_model=list[WorkTypeDefinition])
+async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[WorkTypeDefinition]:
+    result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.id))
+    return list(result.all())
 
 
 @app.post("/nations", response_model=Nation)
 async def create_nation(
     data: NationCreate, session: AsyncSession = Depends(get_session)
 ) -> Nation:
-    nation = Nation.model_validate(data)
+    nation = Nation(name=data.name, population=data.population)
     session.add(nation)
     await session.commit()
     await session.refresh(nation)
+    result = await session.exec(select(Resource))
+    for resource in result.all():
+        session.add(
+            NationResource(
+                nation_id=nation.id,
+                resource_id=resource.id,
+                amount=data.resources.get(resource.code, 0),
+            )
+        )
+    await session.commit()
     return nation
 
 
@@ -76,11 +77,31 @@ async def get_nation(
             Process.nation_id == nation_id, Process.status == "active"
         )
     )
+    process_rows = list(result.all())
+    result = await session.exec(
+        select(NationResource, Resource)
+        .join(Resource, NationResource.resource_id == Resource.id)
+        .where(NationResource.nation_id == nation_id)
+        .order_by(Resource.id)
+    )
+    resource_rows = result.all()
+    result = await session.exec(select(WorkTypeDefinition))
+    work_types = {work_type.code: work_type for work_type in result.all()}
+    resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
+    flow = daily_resource_flow(nation, process_rows, resource_amounts, work_types)
     return nation.model_dump() | {
         "current_day": current_day,
         "active_population": active,
         "passive_population": nation.population - active,
-        "daily_resources": daily_resource_flow(nation, list(result.all())),
+        "resources": [
+            {
+                "code": resource.code,
+                "name": resource.name,
+                "amount": nation_resource.amount,
+                **flow[resource.code],
+            }
+            for nation_resource, resource in resource_rows
+        ],
         "population_growth": {
             "available": population_growth_available(nation),
             "max_increase": population_growth_limit(nation.population),
@@ -139,23 +160,34 @@ async def adjust_resource(
     data: ResourceAdjustment,
     session: AsyncSession = Depends(get_session),
 ) -> Nation:
-    if resource not in RESOURCE_FIELDS:
-        raise HTTPException(status_code=422, detail="Unknown resource")
     nation = await session.get(Nation, nation_id)
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
-    previous_amount = getattr(nation, resource)
+    result = await session.exec(select(Resource).where(Resource.code == resource))
+    resource_definition = result.first()
+    if resource_definition is None:
+        raise HTTPException(status_code=422, detail="Unknown resource")
+    result = await session.exec(
+        select(NationResource).where(
+            NationResource.nation_id == nation_id,
+            NationResource.resource_id == resource_definition.id,
+        )
+    )
+    nation_resource = result.first()
+    if nation_resource is None:
+        raise HTTPException(status_code=422, detail="Nation resource not found")
+    previous_amount = nation_resource.amount
     current_amount = max(0, previous_amount + data.amount)
-    setattr(nation, resource, current_amount)
+    nation_resource.amount = current_amount
     if current_amount != previous_amount:
         session.add(
             NationLog(
                 nation_id=nation_id,
-                message=f"Ручна зміна: {RESOURCE_LABELS[resource]}",
+                message=f"Ручна зміна: {resource_definition.name}",
                 amount=current_amount - previous_amount,
             )
         )
-    session.add(nation)
+    session.add(nation_resource)
     await session.commit()
     await session.refresh(nation)
     return nation
@@ -182,11 +214,15 @@ async def create_process(
     nation = await session.get(Nation, nation_id)
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
-    if data.mode == ProcessMode.FINITE and data.required_worker_days is None:
+    result = await session.exec(select(WorkTypeDefinition).where(WorkTypeDefinition.code == data.work_type))
+    work_type = result.first()
+    if work_type is None:
+        raise HTTPException(status_code=422, detail="Unknown work type")
+    if work_type.mode == WorkMode.FINITE and data.required_worker_days is None:
         raise HTTPException(
             status_code=422, detail="Finite processes require worker days"
         )
-    if data.mode == ProcessMode.CONTINUOUS and data.required_worker_days is not None:
+    if work_type.mode == WorkMode.CONTINUOUS and data.required_worker_days is not None:
         raise HTTPException(
             status_code=422, detail="Continuous processes cannot have worker days"
         )
@@ -201,7 +237,7 @@ async def create_process(
         > active_population(nation.population)
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
-    process = Process(nation_id=nation_id, **data.model_dump())
+    process = Process(nation_id=nation_id, **data.model_dump() | {"mode": work_type.mode})
     session.add(process)
     await session.commit()
     await session.refresh(process)

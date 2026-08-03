@@ -3,16 +3,7 @@
 import { useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
-const workTypes = [
-  "food_gathering",
-  "hunting",
-  "fishing",
-  "woodcutting",
-  "mining",
-  "building",
-  "investigation",
-];
-const resources = [["general_points", "General points"], ["food", "Їжа"], ["wood", "Дерево"], ["stone", "Камінь"]];
+const intensityCoefficients = { BASE: 1, LIGHT: 1.5, STANDARD: 2, MEDIUM: 2.5, HEAVY: 3 };
 const statusLabels = {
   stopped: "зупинено",
   completed: "завершено",
@@ -32,7 +23,7 @@ export default function Home() {
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
   const [resourceAmounts, setResourceAmounts] = useState({});
-  const [processMode, setProcessMode] = useState("continuous");
+  const [selectedWorkType, setSelectedWorkType] = useState("food_gathering");
   const assignedWorkers = processes
     .filter((process) => process.status === "active")
     .reduce((total, process) => total + process.assigned_workers, 0);
@@ -41,6 +32,8 @@ export default function Home() {
     : 0;
   const currentProcesses = processes.filter((process) => process.status === "active");
   const historyProcesses = processes.filter((process) => process.status !== "active");
+  const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, resource.name]));
+  const processMode = workRules.find((workType) => workType.code === selectedWorkType)?.mode || "continuous";
   const growthButtonText = nation?.hunger.active
     ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
     : nation?.population_growth.available
@@ -91,7 +84,7 @@ export default function Home() {
         body: JSON.stringify({
           name: form.get("name"),
           population: Number(form.get("population")),
-          food: Number(form.get("food")),
+          resources: { food: Number(form.get("food")) },
         }),
       });
       await loadNation(data.id);
@@ -123,7 +116,6 @@ export default function Home() {
         }),
       });
       formElement.reset();
-      setProcessMode("continuous");
       setWorkerError("");
       await loadNation();
     } catch (error) {
@@ -208,9 +200,9 @@ export default function Home() {
             </dl>
             <dl className="resources">
               <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
-              {resources.map(([resource, label]) => (
-                <div className="resource-row" key={resource}>
-                  <dt>{label}</dt><dd className={resource === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span><div className="resource-adjust"><input aria-label={`Змінити ${label}`} type="number" step="1" value={resourceAmounts[resource] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource)}>ADD</button></div>
+              {(nation.resources || []).map((resource) => (
+                <div className="resource-row" key={resource.code}>
+                  <dt>{resource.name}</dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`Змінити ${resource.name}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>ADD</button></div>
                 </div>
               ))}
             </dl>
@@ -221,12 +213,12 @@ export default function Home() {
               <h2>Новий процес</h2>
               <form onSubmit={createProcess}>
                 <label>Назва<input name="name" required placeholder="Наприклад, лісоруби" /></label>
-                <label>Робота<select name="work_type">{workTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                <label>Робота<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{type.name}</option>)}</select></label>
                 <button className="work-info-button" type="button" aria-label="Ефекти робіт" title="Ефекти робіт" onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
                 {workInfoOpen && <ul className="work-rules">
-                  {workRules.map((rule) => <li key={rule.work_type}><strong>{rule.work_type}</strong><span className="log-negative">Їжа ×{rule.food_multiplier}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resources.find(([key]) => key === resource)?.[1]}</span>)}</li>)}
+                  {workRules.map((rule) => <li key={rule.code}><strong>{rule.name}</strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
                 </ul>}
-                <label>Режим<select name="mode" value={processMode} onChange={(event) => setProcessMode(event.target.value)}><option value="continuous">Постійний</option><option value="finite">Кінцевий</option></select></label>
+                <p>Режим: {processMode === "finite" ? "Кінцевий" : "Постійний"}</p>
                 <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
                 {workerError && <p className="field-error" role="alert">{workerError}</p>}
                 {processMode === "finite" && <label>Людино-дні для завершення<input name="required_worker_days" type="number" min="1" defaultValue="10" required /></label>}
