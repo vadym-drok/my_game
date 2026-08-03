@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select
@@ -43,6 +45,7 @@ async def get_nation(
         )
     )
     return nation.model_dump() | {
+        "current_day": (date.today() - nation.start_date).days + 1,
         "active_population": active,
         "passive_population": nation.population - active,
         "daily_resources": daily_resource_flow(nation, list(result.all())),

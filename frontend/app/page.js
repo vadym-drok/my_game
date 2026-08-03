@@ -149,7 +149,7 @@ export default function Home() {
         <>
           <section className="card nation">
             <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2></div>
-            <p className="start-date"><span>Старт</span>{nation.start_date}</p>
+            <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
               <div><dt>Населення</dt><dd>{nation.population}</dd></div>
               <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
@@ -183,7 +183,7 @@ export default function Home() {
               <section className="card">
               <h2>Поточні процеси</h2>
               <div className="workforce">
-                <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span><span>Вільно: {availableWorkers}</span></div>
+                <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span></div>
                 <progress value={assignedWorkers} max={nation.active_population || 1} />
               </div>
               {currentProcesses.length === 0 ? <p>Немає активних процесів.</p> : (
