@@ -45,3 +45,7 @@ class ProcessUpdate(SQLModel):
 
 class PopulationGrowth(SQLModel):
     amount: int = Field(ge=0)
+
+
+class ResourceAdjustment(SQLModel):
+    amount: int

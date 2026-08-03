@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
@@ -41,6 +41,14 @@ class DayReport(SQLModel, table=True):
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
     notes: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+
+
+class NationLog(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    nation_id: int = Field(foreign_key="nation.id", index=True)
+    message: str
+    amount: int
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class Process(SQLModel, table=True):

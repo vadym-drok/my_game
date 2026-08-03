@@ -4,22 +4,29 @@ from datetime import date, timedelta
 import app.day_service as day_service
 from app.day_service import advance_day, daily_resource_flow, sync_nation
 from app.game_rules import WorkType
-from app.models import Nation, Process
+from app.main import adjust_resource
+from app.models import Nation, NationLog, Process
 from app.population_growth import population_growth_available, population_growth_limit
+from app.schemas import ResourceAdjustment
 from app.settings import active_population
 
 class FakeSession:
-    def __init__(self, processes: list[Process]) -> None:
+    def __init__(self, processes: list[Process], nation: Nation | None = None) -> None:
         self.processes = processes
+        self.nation = nation
+        self.added: list[object] = []
 
-    def add(self, _: object) -> None:
-        pass
+    def add(self, item: object) -> None:
+        self.added.append(item)
 
     async def commit(self) -> None:
         pass
 
     async def refresh(self, _: object) -> None:
         pass
+
+    async def get(self, _: object, __: int) -> Nation | None:
+        return self.nation
 
     async def exec(self, _: object) -> "FakeResult":
         return FakeResult(self.processes)
@@ -75,12 +82,23 @@ async def check() -> None:
     assert hungry_report.food_shortage == 10
     await advance_day(FakeSession([]), hungry_nation, date.today() + timedelta(days=1))
     await advance_day(FakeSession([]), hungry_nation, date.today() + timedelta(days=2))
+    hunger_penalty_session = FakeSession([])
     hunger_penalty_report = await advance_day(
-        FakeSession([]), hungry_nation, date.today() + timedelta(days=3)
+        hunger_penalty_session, hungry_nation, date.today() + timedelta(days=3)
     )
     assert hungry_nation.population == 9
-    assert hungry_nation.consecutive_hunger_days == 0
+    assert hungry_nation.consecutive_hunger_days == 1
     assert hunger_penalty_report.notes == ["Food shortage: 10", "Population loss: 1"]
+    assert any(isinstance(item, NationLog) and item.amount == -1 for item in hunger_penalty_session.added)
+
+    resource_nation = Nation(name="Resources", food=5)
+    resource_nation.id = 5
+    resource_session = FakeSession([], resource_nation)
+    await adjust_resource(5, "food", ResourceAdjustment(amount=-9), resource_session)
+    await adjust_resource(5, "stone", ResourceAdjustment(amount=7), resource_session)
+    assert resource_nation.food == 0
+    assert resource_nation.stone == 7
+    assert any(isinstance(item, NationLog) and item.amount == 7 for item in resource_session.added)
 
     original_mode = day_service.DAY_PROGRESS_MODE
     day_service.DAY_PROGRESS_MODE = "calendar"

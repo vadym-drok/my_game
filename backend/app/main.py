@@ -7,11 +7,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
-from app.models import DayReport, Nation, Process
+from app.models import DayReport, Nation, NationLog, Process
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
     PopulationGrowth,
+    ResourceAdjustment,
     ProcessCreate,
     ProcessMode,
     ProcessUpdate,
@@ -24,6 +25,8 @@ from app.settings import (
 )
 
 app = FastAPI(title="My Game API")
+RESOURCE_FIELDS = {"food", "wood", "stone"}
+RESOURCE_LABELS = {"food": "Їжа", "wood": "Дерево", "stone": "Камінь"}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3010"],
@@ -114,6 +117,47 @@ async def apply_population_growth(
     await session.commit()
     await session.refresh(nation)
     return nation
+
+
+@app.post("/nations/{nation_id}/resources/{resource}", response_model=Nation)
+async def adjust_resource(
+    nation_id: int,
+    resource: str,
+    data: ResourceAdjustment,
+    session: AsyncSession = Depends(get_session),
+) -> Nation:
+    if resource not in RESOURCE_FIELDS:
+        raise HTTPException(status_code=422, detail="Unknown resource")
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    previous_amount = getattr(nation, resource)
+    current_amount = max(0, previous_amount + data.amount)
+    setattr(nation, resource, current_amount)
+    if current_amount != previous_amount:
+        session.add(
+            NationLog(
+                nation_id=nation_id,
+                message=f"Ручна зміна: {RESOURCE_LABELS[resource]}",
+                amount=current_amount - previous_amount,
+            )
+        )
+    session.add(nation)
+    await session.commit()
+    await session.refresh(nation)
+    return nation
+
+
+@app.get("/nations/{nation_id}/logs", response_model=list[NationLog])
+async def list_nation_logs(
+    nation_id: int, session: AsyncSession = Depends(get_session)
+) -> list[NationLog]:
+    result = await session.exec(
+        select(NationLog)
+        .where(NationLog.nation_id == nation_id)
+        .order_by(NationLog.id.desc())
+    )
+    return list(result.all())
 
 
 @app.post("/nations/{nation_id}/processes", response_model=Process)

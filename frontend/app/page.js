@@ -24,10 +24,12 @@ export default function Home() {
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
   const [processes, setProcesses] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [message, setMessage] = useState("");
   const [workerError, setWorkerError] = useState("");
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
+  const [resourceAmounts, setResourceAmounts] = useState({});
   const assignedWorkers = processes
     .filter((process) => process.status === "active")
     .reduce((total, process) => total + process.assigned_workers, 0);
@@ -62,11 +64,14 @@ export default function Home() {
       const reports = await request(`/nations/${id}/sync?reload_tick=${reloadTick}`, { method: "POST" });
       const data = await request(`/nations/${id}`);
       const activeProcesses = await request(`/nations/${id}/processes`);
+      const eventLogs = await request(`/nations/${id}/logs`);
       setNationId(String(id));
       window.localStorage.setItem("nationId", String(id));
       setNation(data);
       setProcesses(activeProcesses);
-      setMessage(reports.length ? `Оновлено днів: ${reports.length}` : "");
+      setLogs(eventLogs);
+      const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
+      setMessage(populationLoss ? `Голод: населення зменшилось на ${populationLoss.split(": ")[1]}.` : reports.length ? `Оновлено днів: ${reports.length}` : "");
     } catch (error) {
       setMessage(error.message);
     }
@@ -144,6 +149,24 @@ export default function Home() {
     }
   }
 
+  async function adjustResource(resource) {
+    const amount = Number(resourceAmounts[resource]);
+    if (!Number.isInteger(amount)) {
+      setMessage("Введіть ціле число.");
+      return;
+    }
+    try {
+      await request(`/nations/${nationId}/resources/${resource}`, {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      });
+      setResourceAmounts({ ...resourceAmounts, [resource]: "" });
+      await loadNation();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -151,7 +174,7 @@ export default function Home() {
         <h1>My Game</h1>
       </header>
 
-      {message && <p className="message">{message}</p>}
+      {message && <p className={`message ${message.startsWith("Голод:") ? "danger" : ""}`}>{message}</p>}
 
       {!nation ? (
         <section className="card">
@@ -178,10 +201,10 @@ export default function Home() {
               <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
             </dl>
             <dl className="resources">
-              <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span></div>
+              <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
               {resources.map(([resource, label]) => (
                 <div className="resource-row" key={resource}>
-                  <dt>{label}</dt><dd className={resource === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span>
+                  <dt>{label}</dt><dd className={resource === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{nation[resource]}</dd><span className="spending">−{nation.daily_resources[resource].spending}</span><span className="income">+{nation.daily_resources[resource].income}</span><div className="resource-adjust"><input aria-label={`Змінити ${label}`} type="number" step="1" value={resourceAmounts[resource] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource)}>ADD</button></div>
                 </div>
               ))}
             </dl>
@@ -240,6 +263,12 @@ export default function Home() {
                 )}
               </section>
             </div>
+            <section className="card event-log">
+              <h2>Історія подій</h2>
+              {logs.length === 0 ? <p>Подій поки немає.</p> : <ul>
+                {logs.map((log) => <li key={log.id}><span>{log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
+              </ul>}
+            </section>
           </section>
 
           {growthModalOpen && <div className="modal-backdrop">
