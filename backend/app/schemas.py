@@ -23,6 +23,7 @@ class ProcessMode(StrEnum):
 
 class ProcessStatus(StrEnum):
     ACTIVE = "active"
+    STOPPED = "stopped"
     PAUSED = "paused"
     COMPLETED = "completed"
     CANCELLED = "cancelled"

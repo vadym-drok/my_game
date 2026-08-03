@@ -103,7 +103,9 @@ async def list_processes(
     nation_id: int, session: AsyncSession = Depends(get_session)
 ) -> list[Process]:
     result = await session.exec(
-        select(Process).where(Process.nation_id == nation_id)
+        select(Process)
+        .where(Process.nation_id == nation_id)
+        .order_by(Process.id.desc())
     )
     return list(result.all())
 

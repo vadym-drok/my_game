@@ -13,6 +13,12 @@ const workTypes = [
   "investigation",
 ];
 const resources = [["food", "Їжа"], ["wood", "Дерево"], ["stone", "Камінь"]];
+const statusLabels = {
+  stopped: "зупинено",
+  completed: "завершено",
+  paused: "призупинено",
+  cancelled: "зупинено",
+};
 
 export default function Home() {
   const [nationId, setNationId] = useState("");
@@ -26,6 +32,8 @@ export default function Home() {
   const availableWorkers = nation
     ? nation.active_population - assignedWorkers
     : 0;
+  const currentProcesses = processes.filter((process) => process.status === "active");
+  const historyProcesses = processes.filter((process) => process.status !== "active");
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
@@ -171,30 +179,45 @@ export default function Home() {
               </form>
             </section>
 
-            <section className="card">
-              <h2>Процеси</h2>
+            <div className="process-panels">
+              <section className="card">
+              <h2>Поточні процеси</h2>
               <div className="workforce">
                 <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span><span>Вільно: {availableWorkers}</span></div>
                 <progress value={assignedWorkers} max={nation.active_population || 1} />
               </div>
-              {processes.length === 0 ? <p>Ще немає активностей.</p> : (
+              {currentProcesses.length === 0 ? <p>Немає активних процесів.</p> : (
                 <ul className="processes">
-                  {processes.map((process) => (
+                  {currentProcesses.map((process) => (
                     <li key={process.id}>
                       <strong>{process.name}</strong>
-                      <span>{process.work_type} · {process.mode} · {process.status}</span>
+                      <span>{process.work_type} · {process.mode}</span>
                       <span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span>
                       <div>
                         <button onClick={() => updateProcess(process.id, { assigned_workers: Math.max(0, process.assigned_workers - 1) })}>−</button>
                         <button onClick={() => updateProcess(process.id, { assigned_workers: process.assigned_workers + 1 })}>+</button>
-                        <button onClick={() => updateProcess(process.id, { status: "paused" })}>Пауза</button>
-                        <button onClick={() => updateProcess(process.id, { status: "cancelled" })}>Скасувати</button>
+                        <button onClick={() => updateProcess(process.id, { status: "stopped" })}>Зупинити</button>
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
+              <section className="card">
+                <h2>Історія процесів</h2>
+                {historyProcesses.length === 0 ? <p>Історія поки порожня.</p> : (
+                  <ul className="processes history">
+                    {historyProcesses.map((process) => (
+                      <li key={process.id}>
+                        <strong>{process.name}</strong>
+                        <span>{process.work_type} · {process.mode} · {statusLabels[process.status] || process.status}</span>
+                        <span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
           </section>
         </>
       )}
