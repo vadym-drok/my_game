@@ -11,6 +11,8 @@ from app.game_rules import (
 from app.models import DayReport, Nation, Process
 from app.settings import (
     BASE_FOOD_SPENDING,
+    HUNGER_STAGE_ONE_DAYS,
+    POPULATION_GROWTH_PERCENT,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
     active_population,
 )
@@ -107,6 +109,11 @@ async def advance_day(
     if is_hungry:
         nation.consecutive_hunger_days += 1
         nation.population_growth_progress = 0
+        if nation.consecutive_hunger_days > HUNGER_STAGE_ONE_DAYS:
+            population_loss = nation.population * POPULATION_GROWTH_PERCENT // 100
+            nation.population -= population_loss
+            nation.consecutive_hunger_days = 0
+            notes.append(f"Population loss: {population_loss}")
     else:
         nation.consecutive_hunger_days = 0
         nation.population_growth_progress = min(

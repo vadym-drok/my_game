@@ -72,6 +72,14 @@ async def check() -> None:
     assert hungry_nation.population_growth_progress == 0
     assert hungry_report.is_hungry
     assert hungry_report.food_shortage == 10
+    await advance_day(FakeSession([]), hungry_nation, date.today() + timedelta(days=1))
+    await advance_day(FakeSession([]), hungry_nation, date.today() + timedelta(days=2))
+    hunger_penalty_report = await advance_day(
+        FakeSession([]), hungry_nation, date.today() + timedelta(days=3)
+    )
+    assert hungry_nation.population == 9
+    assert hungry_nation.consecutive_hunger_days == 0
+    assert hunger_penalty_report.notes == ["Food shortage: 10", "Population loss: 1"]
 
     delayed_nation = Nation(
         name="Delayed", population=5, food=10, start_date=date.today() - timedelta(days=1)

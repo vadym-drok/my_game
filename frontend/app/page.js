@@ -40,7 +40,7 @@ export default function Home() {
     ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
     : nation?.population_growth.available
       ? `Зростання населення (+${nation.population_growth.max_increase})`
-      : `Зростання населення: ${nation?.population_growth.progress_days}/${nation?.population_growth.required_days}`;
+      : `До поповнення: ${nation?.population_growth.required_days - nation?.population_growth.progress_days} днів`;
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
@@ -245,7 +245,7 @@ export default function Home() {
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
               <h2>Зростання населення</h2>
-              <p>Доступно до +{nation.population_growth.max_increase} осіб. Здорових днів: {nation.population_growth.progress_days}/{nation.population_growth.required_days}.</p>
+              <p>Доступно до +{nation.population_growth.max_increase} осіб.</p>
               <label>Додати населення<input type="number" min="0" max={nation.population_growth.max_increase} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
               <div><button type="button" onClick={() => setGrowthModalOpen(false)}>Скасувати</button><button>Підтвердити</button></div>
             </form>
