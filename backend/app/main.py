@@ -26,8 +26,8 @@ from app.settings import (
 )
 
 app = FastAPI(title="My Game API")
-RESOURCE_FIELDS = {"food", "wood", "stone"}
-RESOURCE_LABELS = {"food": "Їжа", "wood": "Дерево", "stone": "Камінь"}
+RESOURCE_FIELDS = {"general_points", "food", "wood", "stone"}
+RESOURCE_LABELS = {"general_points": "General points", "food": "Їжа", "wood": "Дерево", "stone": "Камінь"}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3010"],

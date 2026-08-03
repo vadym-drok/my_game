@@ -10,6 +10,7 @@ class NationCreate(SQLModel):
     name: str
     population: int = Field(ge=0)
     food: float = Field(default=0, ge=0)
+    general_points: int = Field(default=0, ge=0)
     wood: int = Field(default=0, ge=0)
     stone: int = Field(default=0, ge=0)
     influence: int = Field(default=0, ge=0)

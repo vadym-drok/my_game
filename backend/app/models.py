@@ -13,6 +13,7 @@ class Nation(SQLModel, table=True):
     population_growth_progress: int = 0
     consecutive_hunger_days: int = 0
     food: float = 0
+    general_points: int = 0
     wood: int = 0
     stone: int = 0
     influence: int = 0
@@ -27,6 +28,7 @@ class DayReport(SQLModel, table=True):
     report_date: date
     population: int
     food: float
+    general_points: int
     wood: int
     stone: int
     influence: int

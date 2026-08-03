@@ -20,7 +20,7 @@ from app.settings import (
 
 
 def daily_resource_flow(nation: Nation, processes: list[Process]) -> dict[str, dict[str, float]]:
-    income = {"food": 0, "wood": 0, "stone": 0}
+    income = {"general_points": 0, "food": 0, "wood": 0, "stone": 0}
     food_spending = 0.0
     assigned_workers = 0
     for process in processes:
@@ -134,6 +134,7 @@ async def advance_day(
         report_date=report_date,
         population=nation.population,
         food=nation.food,
+        general_points=nation.general_points,
         wood=nation.wood,
         stone=nation.stone,
         influence=nation.influence,

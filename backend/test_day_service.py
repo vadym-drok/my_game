@@ -65,6 +65,7 @@ async def check() -> None:
         assigned_workers=5,
     )
     flow = daily_resource_flow(nation, [process])
+    assert flow["general_points"] == {"spending": 0, "income": 0}
     assert flow["food"] == {"spending": 15, "income": 0}
     assert flow["wood"] == {"spending": 0, "income": 5}
     report = await advance_day(FakeSession([process]), nation)
@@ -74,6 +75,7 @@ async def check() -> None:
     assert report.food_consumed == 15
     assert nation.food == 5
     assert nation.wood == 5
+    assert report.general_points == 0
     assert nation.population_growth_progress == 1
 
     hungry_nation = Nation(name="Hungry", population=10, start_date=date.today())
@@ -99,8 +101,10 @@ async def check() -> None:
     resource_nation.id = 5
     resource_session = FakeSession([], resource_nation)
     await adjust_resource(5, "food", ResourceAdjustment(amount=-9), resource_session)
+    await adjust_resource(5, "general_points", ResourceAdjustment(amount=8), resource_session)
     await adjust_resource(5, "stone", ResourceAdjustment(amount=7), resource_session)
     assert resource_nation.food == 0
+    assert resource_nation.general_points == 8
     assert resource_nation.stone == 7
     assert any(isinstance(item, NationLog) and item.amount == 7 for item in resource_session.added)
 

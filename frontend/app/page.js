@@ -12,7 +12,7 @@ const workTypes = [
   "building",
   "investigation",
 ];
-const resources = [["food", "Їжа"], ["wood", "Дерево"], ["stone", "Камінь"]];
+const resources = [["general_points", "General points"], ["food", "Їжа"], ["wood", "Дерево"], ["stone", "Камінь"]];
 const statusLabels = {
   stopped: "зупинено",
   completed: "завершено",
