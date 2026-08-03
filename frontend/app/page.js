@@ -25,6 +25,8 @@ export default function Home() {
   const [nation, setNation] = useState(null);
   const [processes, setProcesses] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [workRules, setWorkRules] = useState([]);
+  const [workInfoOpen, setWorkInfoOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [workerError, setWorkerError] = useState("");
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
@@ -66,11 +68,13 @@ export default function Home() {
       const data = await request(`/nations/${id}`);
       const activeProcesses = await request(`/nations/${id}/processes`);
       const eventLogs = await request(`/nations/${id}/logs`);
+      const rules = await request("/work-rules");
       setNationId(String(id));
       window.localStorage.setItem("nationId", String(id));
       setNation(data);
       setProcesses(activeProcesses);
       setLogs(eventLogs);
+      setWorkRules(rules);
       const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
       setMessage(populationLoss ? `Голод: населення зменшилось на ${populationLoss.split(": ")[1]}.` : reports.length ? `Оновлено днів: ${reports.length}` : "");
     } catch (error) {
@@ -218,6 +222,10 @@ export default function Home() {
               <form onSubmit={createProcess}>
                 <label>Назва<input name="name" required placeholder="Наприклад, лісоруби" /></label>
                 <label>Робота<select name="work_type">{workTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                <button className="work-info-button" type="button" aria-label="Ефекти робіт" title="Ефекти робіт" onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
+                {workInfoOpen && <ul className="work-rules">
+                  {workRules.map((rule) => <li key={rule.work_type}><strong>{rule.work_type}</strong><span className="log-negative">Їжа ×{rule.food_multiplier}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resources.find(([key]) => key === resource)?.[1]}</span>)}</li>)}
+                </ul>}
                 <label>Режим<select name="mode" value={processMode} onChange={(event) => setProcessMode(event.target.value)}><option value="continuous">Постійний</option><option value="finite">Кінцевий</option></select></label>
                 <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
                 {workerError && <p className="field-error" role="alert">{workerError}</p>}

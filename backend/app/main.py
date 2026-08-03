@@ -7,6 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
+from app.game_rules import WORK_INTENSITY, WORK_OUTPUTS, WorkType
 from app.models import DayReport, Nation, NationLog, Process
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
@@ -33,6 +34,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/work-rules")
+async def get_work_rules() -> list[dict]:
+    return [
+        {
+            "work_type": work_type.value,
+            "food_multiplier": WORK_INTENSITY[work_type].value,
+            "outputs": WORK_OUTPUTS.get(work_type, {}),
+        }
+        for work_type in WorkType
+    ]
 
 
 @app.post("/nations", response_model=Nation)

@@ -4,7 +4,7 @@ from datetime import date, timedelta
 import app.day_service as day_service
 from app.day_service import advance_day, daily_resource_flow, sync_nation
 from app.game_rules import WorkType
-from app.main import adjust_resource
+from app.main import adjust_resource, get_work_rules
 from app.models import Nation, NationLog, Process
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import ResourceAdjustment
@@ -44,6 +44,10 @@ class FakeResult:
 
 
 async def check() -> None:
+    rules = await get_work_rules()
+    assert next(rule for rule in rules if rule["work_type"] == "woodcutting") == {
+        "work_type": "woodcutting", "food_multiplier": 2, "outputs": {"wood": 1}
+    }
     assert active_population(50) == 40
     growth_nation = Nation(name="Growth", start_date=date(2026, 8, 2), population=50)
     assert not population_growth_available(growth_nation)
