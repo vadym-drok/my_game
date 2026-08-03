@@ -1,6 +1,7 @@
 import asyncio
 from datetime import date, timedelta
 
+import app.day_service as day_service
 from app.day_service import advance_day, daily_resource_flow, sync_nation
 from app.game_rules import WorkType
 from app.models import Nation, Process
@@ -81,6 +82,8 @@ async def check() -> None:
     assert hungry_nation.consecutive_hunger_days == 0
     assert hunger_penalty_report.notes == ["Food shortage: 10", "Population loss: 1"]
 
+    original_mode = day_service.DAY_PROGRESS_MODE
+    day_service.DAY_PROGRESS_MODE = "calendar"
     delayed_nation = Nation(
         name="Delayed", population=5, food=10, start_date=date.today() - timedelta(days=1)
     )
@@ -88,6 +91,14 @@ async def check() -> None:
     reports = await sync_nation(FakeSession([]), delayed_nation)
     assert len(reports) == 1
     assert reports[0].report_date == date.today() - timedelta(days=1)
+
+    day_service.DAY_PROGRESS_MODE = "reload"
+    reload_nation = Nation(name="Reload", population=5, food=10, start_date=date.today())
+    reload_nation.id = 4
+    assert not await sync_nation(FakeSession([]), reload_nation)
+    reports = await sync_nation(FakeSession([]), reload_nation, reload_tick=True)
+    assert len(reports) == 1
+    day_service.DAY_PROGRESS_MODE = original_mode
 
 
 asyncio.run(check())

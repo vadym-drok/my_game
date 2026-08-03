@@ -11,6 +11,7 @@ from app.game_rules import (
 from app.models import DayReport, Nation, Process
 from app.settings import (
     BASE_FOOD_SPENDING,
+    DAY_PROGRESS_MODE,
     HUNGER_STAGE_ONE_DAYS,
     POPULATION_GROWTH_PERCENT,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
@@ -145,7 +146,10 @@ async def advance_day(
 
 
 async def sync_nation(
-    session: AsyncSession, nation: Nation, today: date | None = None
+    session: AsyncSession,
+    nation: Nation,
+    today: date | None = None,
+    reload_tick: bool = False,
 ) -> list[DayReport]:
     today = today or date.today()
     result = await session.exec(
@@ -160,6 +164,9 @@ async def sync_nation(
         if last_report is not None
         else nation.start_date
     )
+    if DAY_PROGRESS_MODE == "reload":
+        return [await advance_day(session, nation, next_report_date)] if reload_tick else []
+
     last_completed_date = today - timedelta(days=1)
 
     reports = []

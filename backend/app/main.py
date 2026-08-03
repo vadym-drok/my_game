@@ -18,6 +18,7 @@ from app.schemas import (
 )
 from app.settings import (
     HUNGER_STAGE_ONE_DAYS,
+    DAY_PROGRESS_MODE,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
     active_population,
 )
@@ -50,13 +51,17 @@ async def get_nation(
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     active = active_population(nation.population)
+    current_day = (date.today() - nation.start_date).days + 1
+    if DAY_PROGRESS_MODE == "reload":
+        reports = await session.exec(select(DayReport.id).where(DayReport.nation_id == nation_id))
+        current_day = len(reports.all()) + 1
     result = await session.exec(
         select(Process).where(
             Process.nation_id == nation_id, Process.status == "active"
         )
     )
     return nation.model_dump() | {
-        "current_day": (date.today() - nation.start_date).days + 1,
+        "current_day": current_day,
         "active_population": active,
         "passive_population": nation.population - active,
         "daily_resources": daily_resource_flow(nation, list(result.all())),
@@ -77,13 +82,14 @@ async def get_nation(
 @app.post("/nations/{nation_id}/sync", response_model=list[DayReport])
 async def sync_nation_days(
     nation_id: int,
+    reload_tick: bool = False,
     session: AsyncSession = Depends(get_session),
 ) -> list[DayReport]:
     nation = await session.get(Nation, nation_id)
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     try:
-        return await sync_nation(session, nation)
+        return await sync_nation(session, nation, reload_tick=reload_tick)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

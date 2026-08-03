@@ -44,7 +44,7 @@ export default function Home() {
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
-    if (savedId) loadNation(savedId);
+    if (savedId) loadNation(savedId, true);
   }, []);
 
   async function request(path, options) {
@@ -57,9 +57,9 @@ export default function Home() {
     return data;
   }
 
-  async function loadNation(id = nationId) {
+  async function loadNation(id = nationId, reloadTick = false) {
     try {
-      const reports = await request(`/nations/${id}/sync`, { method: "POST" });
+      const reports = await request(`/nations/${id}/sync?reload_tick=${reloadTick}`, { method: "POST" });
       const data = await request(`/nations/${id}`);
       const activeProcesses = await request(`/nations/${id}/processes`);
       setNationId(String(id));
