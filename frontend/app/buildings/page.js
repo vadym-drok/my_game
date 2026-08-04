@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ICON_SIZES } from "../settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 function BuildingIcon({ building }) {
   const [missing, setMissing] = useState(!building.image_path);
-  return <span className="icon-tooltip tooltip" data-tooltip={building.name} tabIndex="0">{missing ? <span className="game-icon fallback">{building.code}</span> : <img className="game-icon" src={building.image_path} alt={building.name} onError={() => setMissing(true)} />}</span>;
+  return <span className="icon-tooltip tooltip" style={{ "--icon-size": `${ICON_SIZES.building}px` }} data-tooltip={building.name} tabIndex="0">{missing ? <span className="game-icon fallback">{building.code}</span> : <img className="game-icon" src={building.image_path} alt={building.name} onError={() => setMissing(true)} />}</span>;
 }
 
 export default function Buildings() {

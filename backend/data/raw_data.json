@@ -29,30 +29,37 @@
   "work_types": [
     {
       "code": "hunting", "name": "Hunting", "intensity": "BASE", "mode": "continuous",
-      "outputs": {"food": 3}, "image_path": "/images/work-types/hunting.png"},
+      "outputs": {"food": 3},
+      "image_path": "/images/work-types/hunting.png"},
     {
       "code": "food_gathering", "name": "Food gathering", "intensity": "BASE", "mode": "continuous",
-      "outputs": {"food": 2}, "image_path": "/images/work-types/food_gathering.png"
+      "outputs": {"food": 2},
+      "image_path": "/images/work-types/food_gathering.png"
     },
     {
       "code": "fishing", "name": "Fishing", "intensity": "BASE", "mode": "continuous",
-      "outputs": {"food": 3}, "image_path": "/images/work-types/fishing.png"
+      "outputs": {"food": 3},
+      "image_path": "/images/work-types/fishing.png"
     },
     {
       "code": "woodcutting", "name": "Woodcutting", "intensity": "STANDARD", "mode": "continuous",
-      "outputs": {"wood": 1}, "image_path": "/images/work-types/woodcutting.png"
+      "outputs": {"wood": 1},
+      "image_path": "/images/work-types/woodcutting.png"
     },
     {
       "code": "building", "name": "Building", "intensity": "LIGHT", "mode": "finite",
-      "outputs": {}, "image_path": "/images/work-types/building.png"
+      "outputs": {},
+      "image_path": "/images/work-types/building.png"
     },
     {
       "code": "investigation", "name": "Investigation", "intensity": "STANDARD", "mode": "finite",
-      "outputs": {}, "image_path": "/images/work-types/investigation.png"
+      "outputs": {},
+      "image_path": "/images/work-types/investigation.png"
     },
     {
       "code": "mining", "name": "Mining", "intensity": "HEAVY", "mode": "continuous",
-      "outputs": {"stone": 1}, "image_path": "/images/work-types/mining.png"
+      "outputs": {"stone": 1},
+      "image_path": "/images/work-types/mining.png"
     }
   ],
   "buildings": [

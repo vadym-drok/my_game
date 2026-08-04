@@ -25,6 +25,7 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .processes { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 .processes li { border-top: 1px solid #425240; padding-top: 12px; display: grid; gap: 5px; }
 .processes span { color: #b9c3b3; font-size: .9rem; }
+.processes .process-work { display: flex; align-items: center; gap: 7px; }
 .processes div { display: flex; gap: 6px; margin-top: 4px; }
 .processes button { background: transparent; border-color: #748a70; color: #d8e3d2; padding: 5px 8px; }
 .event-log ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
@@ -38,7 +39,7 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .general-points dt { color: #aab9a4; font-size: .8rem; }
 .general-points dd { margin: 0; font-size: 1.25rem; }
 .resource-row dt, .general-points dt, .building strong, .work-rules li strong { display: flex; align-items: center; gap: 7px; }
-.game-icon { width: 26px; height: 26px; flex: 0 0 26px; object-fit: contain; }
+.game-icon { width: var(--icon-size, 26px); height: var(--icon-size, 26px); flex: 0 0 var(--icon-size, 26px); object-fit: contain; }
 .game-icon.fallback { display: inline-grid; place-items: center; overflow: hidden; padding: 2px; border: 1px solid #748a70; border-radius: 5px; color: #c9d3c0; font-size: .55rem; line-height: 1; text-align: center; }
 .icon-tooltip { display: inline-flex; }
 .housing-capacity { font-size: .9rem; }

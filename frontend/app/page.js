@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ICON_SIZES } from "./settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 const intensityCoefficients = { BASE: 1, LIGHT: 1.5, STANDARD: 2, MEDIUM: 2.5, HEAVY: 3 };
@@ -11,9 +12,9 @@ const statusLabels = {
   cancelled: "зупинено",
 };
 
-function ItemIcon({ item }) {
+function ItemIcon({ item, type = "resource" }) {
   const [missing, setMissing] = useState(!item.image_path);
-  return <span className="icon-tooltip tooltip" data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
+  return <span className="icon-tooltip tooltip" style={{ "--icon-size": `${ICON_SIZES[type]}px` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
 }
 
 export default function Home() {
@@ -37,6 +38,7 @@ export default function Home() {
     : 0;
   const currentProcesses = processes.filter((process) => process.status === "active");
   const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, resource.name]));
+  const workTypesByCode = Object.fromEntries(workRules.map((workType) => [workType.code, workType]));
   const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
   const housingProvided = nation?.housing_capacity ?? 0;
@@ -231,7 +233,7 @@ export default function Home() {
                 <label>Робота<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{type.name}</option>)}</select></label>
                 <button className="work-info-button" type="button" aria-label="Ефекти робіт" title="Ефекти робіт" onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
                 {workInfoOpen && <ul className="work-rules">
-                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} /></strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
+                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} type="work_type" /></strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
                 </ul>}
                 <p>Режим: {processMode === "finite" ? "Кінцевий" : "Постійний"}</p>
                 <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
@@ -253,7 +255,7 @@ export default function Home() {
                   {currentProcesses.map((process) => (
                     <li key={process.id}>
                       <strong>{process.name}</strong>
-                      <span>{process.work_type} · {process.mode}</span>
+                      <span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{process.mode}</span>
                       <span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span>
                       <div>
                         <button onClick={() => updateProcess(process.id, { assigned_workers: Math.max(0, process.assigned_workers - 1) })}>−</button>
