@@ -47,3 +47,10 @@
 - фони
 - ресурси
 
+
+---
+Resources:
+
+- settings.js
+- settings.py
+- raw_data.json

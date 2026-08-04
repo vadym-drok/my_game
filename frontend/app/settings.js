@@ -1,5 +1,5 @@
 export const ICON_SIZES = {
-  resource: 26,
-  work_type: 32,
-  building: 26,
+  resource: 32,
+  work_type: 48,
+  building: 48,
 };
