@@ -28,7 +28,7 @@ export default function History() {
   }, []);
 
   return <main>
-    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія процесів</h1><a className="back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
+    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія процесів</h1><a className="page-link back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
     <section className="card">
       {processes === null ? <p>Завантаження…</p> : processes.length === 0 ? <p>Історія поки порожня.</p> : <ul className="processes history">
         {processes.map((process) => <li key={process.id}><strong>{process.name}</strong><span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{process.mode} · {statusLabels[process.status] || process.status}</span><span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span></li>)}

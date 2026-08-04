@@ -20,6 +20,7 @@ function ItemIcon({ item, type = "resource" }) {
 export default function Home() {
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
+  const [nations, setNations] = useState(null);
   const [processes, setProcesses] = useState([]);
   const [logs, setLogs] = useState([]);
   const [workRules, setWorkRules] = useState([]);
@@ -57,6 +58,7 @@ export default function Home() {
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
     if (savedId) loadNation(savedId, true);
+    else loadNations();
   }, []);
 
   async function request(path, options) {
@@ -89,6 +91,14 @@ export default function Home() {
     }
   }
 
+  async function loadNations() {
+    try {
+      setNations(await request("/nations"));
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   async function createNation(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -98,7 +108,7 @@ export default function Home() {
         body: JSON.stringify({
           name: form.get("name"),
           population: Number(form.get("population")),
-          resources: { food: Number(form.get("food")) },
+          resources: { general_points: Number(form.get("general_points")) },
         }),
       });
       await loadNation(data.id);
@@ -166,6 +176,11 @@ export default function Home() {
     setGrowthModalOpen(true);
   }
 
+  function openNationSelector() {
+    window.localStorage.removeItem("nationId");
+    window.location.href = "/";
+  }
+
   async function adjustResource(resource) {
     const amount = Number(resourceAmounts[resource]);
     if (!Number.isInteger(amount)) {
@@ -188,7 +203,7 @@ export default function Home() {
     <main>
       <header>
         <p className="eyebrow">Nation simulator</p>
-        <h1>My Game</h1>
+        <div className="app-title"><h1>My Game</h1>{nation && <button className="page-link" type="button" onClick={openNationSelector}>Нації</button>}</div>
       </header>
 
       {message && <p className={`message ${message.startsWith("Голод:") ? "danger" : ""}`}>{message}</p>}
@@ -199,18 +214,15 @@ export default function Home() {
           <form onSubmit={createNation}>
             <label>Назва<input name="name" required defaultValue="Нова нація" /></label>
             <label>Населення<input name="population" type="number" min="0" defaultValue="10" /></label>
-            <label>Їжа<input name="food" type="number" min="0" defaultValue="30" /></label>
+            <label>General points<input name="general_points" type="number" min="0" defaultValue="30" /></label>
             <button>Створити</button>
           </form>
-          <form className="load-form" onSubmit={(event) => { event.preventDefault(); loadNation(event.currentTarget.id.value); }}>
-            <label>Або відкрити за ID<input name="id" type="number" min="1" required /></label>
-            <button>Відкрити</button>
-          </form>
+          <div className="load-form"><h2>Створені нації</h2>{nations === null ? <p>Завантаження…</p> : nations.length === 0 ? <p>Націй поки немає.</p> : <ul className="nation-list">{nations.map((item) => <li key={item.id}><span><small>#{item.id}</small> {item.name} <small>(День {item.current_day})</small></span><button className="page-link" type="button" onClick={() => loadNation(item.id)}>Відкрити</button></li>)}</ul>}</div>
         </section>
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="buildings-link" href="/buildings">Buildings</a></div>
+            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">Buildings</a></div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
               <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
@@ -251,7 +263,7 @@ export default function Home() {
 
             <div className="process-panels">
               <section className="card">
-              <div className="section-heading"><h2>Поточні процеси</h2><a href="/history">History</a></div>
+              <div className="section-heading"><h2>Поточні процеси</h2><a className="page-link" href="/history">History</a></div>
               <div className="workforce">
                 <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span></div>
                 <progress value={assignedWorkers} max={nation.active_population || 1} />
@@ -279,7 +291,7 @@ export default function Home() {
               {logs.length === 0 ? <p>Подій поки немає.</p> : <ul>
                 {logs.slice(0, 10).map((log) => <li key={log.id}><span>День {log.day} · {log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
-              <a className="log-history-link" href="/logs">Log history</a>
+              <a className="page-link log-history-link" href="/logs">Log history</a>
             </section>
           </section>
 

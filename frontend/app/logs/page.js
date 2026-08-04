@@ -18,7 +18,7 @@ export default function LogHistory() {
   }, []);
 
   return <main>
-    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія подій</h1><a className="back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
+    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія подій</h1><a className="page-link back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
     <section className="card event-log">
       {logs === null ? <p>Завантаження…</p> : logs.length === 0 ? <p>Подій поки немає.</p> : <ul>{logs.map((log) => <li key={log.id}><span>День {log.day} · {log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}</ul>}
     </section>

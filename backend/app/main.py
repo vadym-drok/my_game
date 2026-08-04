@@ -197,6 +197,13 @@ async def create_nation(
     return nation
 
 
+@app.get("/nations")
+async def list_nations(session: AsyncSession = Depends(get_session)) -> list[dict]:
+    result = await session.exec(select(Nation).order_by(Nation.id))
+    nations = result.all()
+    return [nation.model_dump() | {"current_day": await nation_current_day(session, nation)} for nation in nations]
+
+
 @app.get("/nations/{nation_id}")
 async def get_nation(
     nation_id: int, session: AsyncSession = Depends(get_session)
