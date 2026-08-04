@@ -16,3 +16,8 @@ class WorkIntensity(StrEnum):
 class WorkMode(StrEnum):
     CONTINUOUS = "continuous"
     FINITE = "finite"
+
+
+class BuildingType(StrEnum):
+    HOUSING = "housing"
+    WAREHOUSE = "warehouse"

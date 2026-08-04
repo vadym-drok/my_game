@@ -4,7 +4,7 @@ from sqlalchemy import JSON, Column, UniqueConstraint
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from app.game_rules import WorkIntensity, WorkMode
+from app.game_rules import BuildingType, WorkIntensity, WorkMode
 
 
 class Resource(SQLModel, table=True):
@@ -30,6 +30,21 @@ class WorkTypeDefinition(SQLModel, table=True):
     @classmethod
     def validate_mode(cls, value: str) -> str:
         return WorkMode(value).value
+
+
+class BuildingDefinition(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("code"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)
+    name: str
+    building_type: str
+    capacity: int = 0
+
+    @field_validator("building_type")
+    @classmethod
+    def validate_building_type(cls, value: str) -> str:
+        return BuildingType(value).value
 
 
 class Nation(SQLModel, table=True):
