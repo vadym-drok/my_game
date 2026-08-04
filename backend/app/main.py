@@ -154,6 +154,7 @@ async def get_nation(
             {
                 "code": resource.code,
                 "name": resource.name,
+                "image_path": resource.image_path,
                 "amount": nation_resource.amount,
                 **flow[resource.code],
             }

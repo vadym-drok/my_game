@@ -37,6 +37,9 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .general-points .resource-adjust { display: flex; }
 .general-points dt { color: #aab9a4; font-size: .8rem; }
 .general-points dd { margin: 0; font-size: 1.25rem; }
+.resource-row dt, .general-points dt, .building strong, .work-rules li strong { display: flex; align-items: center; gap: 7px; }
+.game-icon { width: 26px; height: 26px; flex: 0 0 26px; object-fit: contain; }
+.game-icon.fallback { display: inline-grid; place-items: center; overflow: hidden; padding: 2px; border: 1px solid #748a70; border-radius: 5px; color: #c9d3c0; font-size: .55rem; line-height: 1; text-align: center; }
 .housing-capacity { font-size: .9rem; }
 .storage-capacity { font-size: .8rem; }
 .housing-capacity.sufficient { color: #a5ca78; }

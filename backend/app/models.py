@@ -14,6 +14,7 @@ class Resource(SQLModel, table=True):
     code: str = Field(index=True)
     name: str
     storage_coefficient: float = 1
+    image_path: str | None = None
 
 
 class WorkTypeDefinition(SQLModel, table=True):
@@ -25,6 +26,7 @@ class WorkTypeDefinition(SQLModel, table=True):
     intensity: WorkIntensity
     mode: str
     outputs: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    image_path: str | None = None
 
     @field_validator("mode")
     @classmethod
@@ -40,6 +42,7 @@ class BuildingDefinition(SQLModel, table=True):
     name: str
     building_type: str
     capacity: int = 0
+    image_path: str | None = None
 
     @field_validator("building_type")
     @classmethod

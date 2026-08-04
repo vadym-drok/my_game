@@ -11,6 +11,12 @@ const statusLabels = {
   cancelled: "зупинено",
 };
 
+function ItemIcon({ item }) {
+  const [missing, setMissing] = useState(!item.image_path);
+  if (missing) return <span className="game-icon fallback" title={`Немає зображення: ${item.code}`}>{item.code}</span>;
+  return <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />;
+}
+
 export default function Home() {
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
@@ -205,14 +211,14 @@ export default function Home() {
               <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
             </dl>
             {generalPoints && <dl className="general-points">
-              <div><dt>{generalPoints.name}</dt><dd>{generalPoints.amount}</dd></div>
+              <div><dt><ItemIcon item={generalPoints} />{generalPoints.name}</dt><dd>{generalPoints.amount}</dd></div>
               <div className="resource-adjust"><input aria-label={`Змінити ${generalPoints.name}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>ADD</button></div>
             </dl>}
             <dl className="resources">
               <div className="resource-head"><dt>Ресурси <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip="Використано складського місця / загальна місткість складів" tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
               {regularResources.map((resource) => (
                 <div className="resource-row" key={resource.code}>
-                  <dt>{resource.name}</dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`Змінити ${resource.name}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>ADD</button></div>
+                  <dt><ItemIcon item={resource} />{resource.name}</dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`Змінити ${resource.name}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>ADD</button></div>
                 </div>
               ))}
             </dl>
@@ -226,7 +232,7 @@ export default function Home() {
                 <label>Робота<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{type.name}</option>)}</select></label>
                 <button className="work-info-button" type="button" aria-label="Ефекти робіт" title="Ефекти робіт" onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
                 {workInfoOpen && <ul className="work-rules">
-                  {workRules.map((rule) => <li key={rule.code}><strong>{rule.name}</strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
+                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} />{rule.name}</strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
                 </ul>}
                 <p>Режим: {processMode === "finite" ? "Кінцевий" : "Постійний"}</p>
                 <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
