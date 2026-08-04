@@ -42,6 +42,9 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .game-icon { width: var(--icon-size, 26px); height: var(--icon-size, 26px); flex: 0 0 var(--icon-size, 26px); object-fit: contain; }
 .game-icon.fallback { display: inline-grid; place-items: center; overflow: hidden; padding: 2px; border: 1px solid #748a70; border-radius: 5px; color: #c9d3c0; font-size: .55rem; line-height: 1; text-align: center; }
 .icon-tooltip { display: inline-flex; }
+.icon-frame { width: var(--icon-size); height: var(--icon-size); align-items: center; justify-content: center; }
+.icon-frame.has-frame { background: var(--icon-frame) center / contain no-repeat; }
+.icon-frame.has-frame .game-icon { width: calc(var(--icon-size) - 6px); height: calc(var(--icon-size) - 6px); flex-basis: calc(var(--icon-size) - 6px); }
 .housing-capacity { font-size: .9rem; }
 .storage-capacity { font-size: .8rem; }
 .housing-capacity.sufficient { color: #a5ca78; }

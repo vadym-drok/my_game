@@ -8,7 +8,7 @@ const statusLabels = { stopped: "зупинено", completed: "завершен
 
 function ItemIcon({ item, type = "resource" }) {
   const [missing, setMissing] = useState(!item.image_path);
-  return <span className="icon-tooltip tooltip" style={{ "--icon-size": `${ICON_SIZES[type]}px` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
+  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
 }
 
 export default function History() {

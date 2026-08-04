@@ -1,28 +1,38 @@
 {
+  "icon_frames": [
+    {"code": "resource_base", "name": "Resource base", "image_path": "/images/icon-frames/resource_base.png"},
+    {"code": "work_type_base", "name": "Work type base", "image_path": "/images/icon-frames/work_type_base.png"},
+    {"code": "building_base", "name": "Building base", "image_path": "/images/icon-frames/building_base.png"}
+  ],
+
   "resources": [
     {
       "code": "general_points",
       "name": "General points",
       "storage_coefficient": 1,
-      "image_path": "/images/resources/general_points.png"
+      "image_path": "/images/resources/general_points.png",
+      "icon_frame_code": "resource_base"
     },
     {
       "code": "food",
       "name": "Їжа",
       "storage_coefficient": 1,
-      "image_path": "/images/resources/food.png"
+      "image_path": "/images/resources/food.png",
+      "icon_frame_code": "resource_base"
     },
     {
       "code": "wood",
       "name": "Дерево",
       "storage_coefficient": 2,
-      "image_path": "/images/resources/wood.png"
+      "image_path": "/images/resources/wood.png",
+      "icon_frame_code": "resource_base"
     },
     {
       "code": "stone",
       "name": "Камінь",
       "storage_coefficient": 3,
-      "image_path": "/images/resources/stone.png"
+      "image_path": "/images/resources/stone.png",
+      "icon_frame_code": "resource_base"
     }
   ],
 
@@ -30,46 +40,46 @@
     {
       "code": "hunting", "name": "Hunting", "intensity": "BASE", "mode": "continuous",
       "outputs": {"food": 3},
-      "image_path": "/images/work-types/hunting.png"},
+      "image_path": "/images/work-types/hunting.png", "icon_frame_code": "work_type_base"},
     {
       "code": "food_gathering", "name": "Food gathering", "intensity": "BASE", "mode": "continuous",
       "outputs": {"food": 2},
-      "image_path": "/images/work-types/food_gathering.png"
+      "image_path": "/images/work-types/food_gathering.png", "icon_frame_code": "work_type_base"
     },
     {
       "code": "fishing", "name": "Fishing", "intensity": "BASE", "mode": "continuous",
       "outputs": {"food": 3},
-      "image_path": "/images/work-types/fishing.png"
+      "image_path": "/images/work-types/fishing.png", "icon_frame_code": "work_type_base"
     },
     {
       "code": "woodcutting", "name": "Woodcutting", "intensity": "STANDARD", "mode": "continuous",
       "outputs": {"wood": 1},
-      "image_path": "/images/work-types/woodcutting.png"
+      "image_path": "/images/work-types/woodcutting.png", "icon_frame_code": "work_type_base"
     },
     {
       "code": "building", "name": "Building", "intensity": "LIGHT", "mode": "finite",
       "outputs": {},
-      "image_path": "/images/work-types/building.png"
+      "image_path": "/images/work-types/building.png", "icon_frame_code": "work_type_base"
     },
     {
       "code": "investigation", "name": "Investigation", "intensity": "STANDARD", "mode": "finite",
       "outputs": {},
-      "image_path": "/images/work-types/investigation.png"
+      "image_path": "/images/work-types/investigation.png", "icon_frame_code": "work_type_base"
     },
     {
       "code": "mining", "name": "Mining", "intensity": "HEAVY", "mode": "continuous",
       "outputs": {"stone": 1},
-      "image_path": "/images/work-types/mining.png"
+      "image_path": "/images/work-types/mining.png", "icon_frame_code": "work_type_base"
     }
   ],
   "buildings": [
     {
       "code": "housing", "name": "Житло", "building_type": "housing", "capacity": 10,
-      "image_path": "/images/buildings/housing.png"
+      "image_path": "/images/buildings/housing.png", "icon_frame_code": "building_base"
     },
     {
       "code": "warehouse", "name": "Склад", "building_type": "warehouse", "capacity": 100,
-      "image_path": "/images/buildings/warehouse.png"
+      "image_path": "/images/buildings/warehouse.png", "icon_frame_code": "building_base"
     }
   ],
 

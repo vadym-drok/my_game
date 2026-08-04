@@ -7,6 +7,15 @@ from sqlmodel import Field, SQLModel
 from app.game_rules import BuildingType, WorkIntensity, WorkMode
 
 
+class IconFrame(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("code"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)
+    name: str
+    image_path: str | None = None
+
+
 class Resource(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("code"),)
 
@@ -15,6 +24,7 @@ class Resource(SQLModel, table=True):
     name: str
     storage_coefficient: float = 1
     image_path: str | None = None
+    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
 
 
 class WorkTypeDefinition(SQLModel, table=True):
@@ -27,6 +37,7 @@ class WorkTypeDefinition(SQLModel, table=True):
     mode: str
     outputs: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
     image_path: str | None = None
+    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
 
     @field_validator("mode")
     @classmethod
@@ -43,6 +54,7 @@ class BuildingDefinition(SQLModel, table=True):
     building_type: str
     capacity: int = 0
     image_path: str | None = None
+    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
 
     @field_validator("building_type")
     @classmethod
