@@ -12,6 +12,7 @@ from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationB
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
+    ConstructionStart,
     PopulationGrowth,
     ResourceAdjustment,
     ProcessCreate,
@@ -76,7 +77,7 @@ async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(
 
 
 @app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
-async def build(nation_id: int, code: str, action: str = "build", session: AsyncSession = Depends(get_session)) -> NationBuilding:
+async def build(nation_id: int, code: str, action: str = "add", session: AsyncSession = Depends(get_session)) -> NationBuilding:
     if await session.get(Nation, nation_id) is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     result = await session.exec(select(BuildingDefinition).where(BuildingDefinition.code == code))
@@ -92,6 +93,66 @@ async def build(nation_id: int, code: str, action: str = "build", session: Async
     await session.commit()
     await session.refresh(building)
     return building
+
+
+@app.post("/nations/{nation_id}/buildings/{code}/construction", response_model=Process)
+async def start_construction(
+    nation_id: int,
+    code: str,
+    data: ConstructionStart,
+    session: AsyncSession = Depends(get_session),
+) -> Process:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    result = await session.exec(select(BuildingDefinition).where(BuildingDefinition.code == code))
+    definition = result.first()
+    if definition is None:
+        raise HTTPException(status_code=404, detail="Building not found")
+    cost = definition.construction_cost
+    worker_days = cost.get("worker_days", 0)
+    if not isinstance(worker_days, int) or worker_days < 1:
+        raise HTTPException(status_code=422, detail="Building requires worker_days")
+    result = await session.exec(select(WorkTypeDefinition).where(WorkTypeDefinition.code == "building"))
+    work_type = result.first()
+    if work_type is None or work_type.mode != WorkMode.FINITE:
+        raise HTTPException(status_code=422, detail="Building work type is unavailable")
+    result = await session.exec(select(Process).where(Process.nation_id == nation_id, Process.status == "active"))
+    if sum(process.assigned_workers for process in result.all()) + data.assigned_workers > active_population(nation.population):
+        raise HTTPException(status_code=422, detail="Active population limit exceeded")
+    result = await session.exec(
+        select(NationResource, Resource)
+        .join(Resource, NationResource.resource_id == Resource.id)
+        .where(NationResource.nation_id == nation_id)
+    )
+    nation_resources = {resource.code: (nation_resource, resource) for nation_resource, resource in result.all()}
+    resource_costs = cost.get("resources", {})
+    for resource_code, amount in resource_costs.items():
+        if not isinstance(amount, (int, float)) or amount < 0:
+            raise HTTPException(status_code=422, detail="Invalid construction resource cost")
+        nation_resource, resource = nation_resources.get(resource_code, (None, None))
+        if nation_resource is None or nation_resource.amount < amount:
+            raise HTTPException(status_code=422, detail=f"Not enough resource: {resource.name if resource else resource_code}")
+    for resource_code, amount in resource_costs.items():
+        nation_resource, resource = nation_resources[resource_code]
+        nation_resource.amount -= amount
+        session.add(nation_resource)
+        if amount:
+            session.add(NationLog(nation_id=nation_id, message=f"Будівництво: {definition.name} — {resource.name}", amount=-amount))
+    process = Process(
+        nation_id=nation_id,
+        name=f"Будівництво: {definition.name}",
+        work_type="building",
+        mode=WorkMode.FINITE,
+        assigned_workers=data.assigned_workers,
+        required_worker_days=worker_days,
+        details={"building_definition_id": definition.id, "construction_cost": cost},
+    )
+    session.add(process)
+    session.add(NationLog(nation_id=nation_id, message=f"Розпочато будівництво: {definition.name}", amount=0))
+    await session.commit()
+    await session.refresh(process)
+    return process
 
 
 @app.delete("/nations/{nation_id}/buildings/{building_id}", status_code=204)

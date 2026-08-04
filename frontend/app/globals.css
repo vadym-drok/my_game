@@ -3,6 +3,8 @@
 body { margin: 0; }
 main { max-width: 1050px; margin: auto; padding: 48px 20px; }
 h1 { font-size: 3rem; margin: 0; } h2 { margin-top: 0; }
+.page-header { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.page-day { margin: 0; color: #aab9a4; font-size: .9rem; white-space: nowrap; }
 .eyebrow { color: #a5ca78; letter-spacing: .08em; text-transform: uppercase; font-size: .75rem; }
 .card { background: #263125; border: 1px solid #425240; border-radius: 12px; padding: 22px; margin: 24px 0; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }

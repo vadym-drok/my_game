@@ -74,8 +74,8 @@
   ],
   "buildings": [
     {
-      "code": "housing", "name": "Житло", "building_type": "housing", "capacity": 10,
-      "image_path": "/images/buildings/housing.png", "icon_frame_code": "building_base",
+      "code": "tent", "name": "Житло", "building_type": "housing", "capacity": 10,
+      "image_path": "/images/buildings/tent.png", "icon_frame_code": "building_base",
       "construction_cost": {"resources": {"wood": 15}, "worker_days": 10}
     },
     {

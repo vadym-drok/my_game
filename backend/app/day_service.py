@@ -4,7 +4,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.game_rules import WorkIntensity
-from app.models import DayReport, Nation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.settings import (
     BASE_FOOD_SPENDING,
     DAY_PROGRESS_MODE,
@@ -95,6 +95,12 @@ async def advance_day(
             if process.completed_worker_days == process.required_worker_days:
                 process.status = "completed"
                 process.completed_at = report_date
+                building_definition_id = process.details.get("building_definition_id")
+                if building_definition_id is not None:
+                    definition = await session.get(BuildingDefinition, building_definition_id)
+                    if definition is not None:
+                        session.add(NationBuilding(nation_id=nation.id, building_definition_id=definition.id, built_at=report_date))
+                        session.add(NationLog(nation_id=nation.id, message=f"Завершено будівництво: {definition.name}", amount=1))
 
         processes_summary.append(
             {

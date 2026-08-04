@@ -14,6 +14,7 @@ function ItemIcon({ item, type = "resource" }) {
 export default function History() {
   const [processes, setProcesses] = useState(null);
   const [workRules, setWorkRules] = useState([]);
+  const [nation, setNation] = useState(null);
   const workTypesByCode = Object.fromEntries(workRules.map((workType) => [workType.code, workType]));
 
   useEffect(() => {
@@ -22,11 +23,12 @@ export default function History() {
     Promise.all([
       fetch(`${API_URL}/nations/${nationId}/processes`).then((response) => response.json()),
       fetch(`${API_URL}/work-rules`).then((response) => response.json()),
-    ]).then(([data, rules]) => { setProcesses(data.filter((process) => process.status !== "active")); setWorkRules(rules); });
+      fetch(`${API_URL}/nations/${nationId}`).then((response) => response.json()),
+    ]).then(([data, rules, nationData]) => { setProcesses(data.filter((process) => process.status !== "active")); setWorkRules(rules); setNation(nationData); });
   }, []);
 
   return <main>
-    <header><p className="eyebrow">Nation simulator</p><h1>Історія процесів</h1><a className="back-link" href="/">← До нації</a></header>
+    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія процесів</h1><a className="back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
     <section className="card">
       {processes === null ? <p>Завантаження…</p> : processes.length === 0 ? <p>Історія поки порожня.</p> : <ul className="processes history">
         {processes.map((process) => <li key={process.id}><strong>{process.name}</strong><span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{process.mode} · {statusLabels[process.status] || process.status}</span><span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span></li>)}

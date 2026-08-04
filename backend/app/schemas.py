@@ -42,3 +42,7 @@ class PopulationGrowth(SQLModel):
 
 class ResourceAdjustment(SQLModel):
     amount: int
+
+
+class ConstructionStart(SQLModel):
+    assigned_workers: int = Field(ge=1)
