@@ -75,11 +75,13 @@
   "buildings": [
     {
       "code": "housing", "name": "Житло", "building_type": "housing", "capacity": 10,
-      "image_path": "/images/buildings/housing.png", "icon_frame_code": "building_base"
+      "image_path": "/images/buildings/housing.png", "icon_frame_code": "building_base",
+      "construction_cost": {"resources": {"wood": 15}, "worker_days": 10}
     },
     {
       "code": "warehouse", "name": "Склад", "building_type": "warehouse", "capacity": 100,
-      "image_path": "/images/buildings/warehouse.png", "icon_frame_code": "building_base"
+      "image_path": "/images/buildings/warehouse.png", "icon_frame_code": "building_base",
+      "construction_cost": {"resources": {"wood": 10}, "worker_days": 5}
     }
   ],
 

@@ -21,6 +21,10 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .buildings-link { display: inline-block; margin: 10px 0 0 8px; }
 .building { display: grid; gap: 6px; border-top: 1px solid #425240; padding: 12px 0; }
 .building span { color: #b9c3b3; }
+.building-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.building-buttons { display: flex; gap: 8px; }
+.building-cost { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: #b9c3b3; font-size: .85rem; }
+.building-cost .cost-resource { display: inline-flex; align-items: center; gap: 4px; color: #eef2e2; }
 .building button { justify-self: start; }
 .processes { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
 .processes li { border-top: 1px solid #425240; padding-top: 12px; display: grid; gap: 5px; }

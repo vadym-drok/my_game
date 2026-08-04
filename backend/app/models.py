@@ -55,6 +55,7 @@ class BuildingDefinition(SQLModel, table=True):
     capacity: int = 0
     image_path: str | None = None
     icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
+    construction_cost: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
     @field_validator("building_type")
     @classmethod

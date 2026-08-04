@@ -42,6 +42,13 @@ def with_icon_frame(item: Resource | WorkTypeDefinition | BuildingDefinition, pa
     return item.model_dump() | {"icon_frame_image_path": paths.get(item.icon_frame_id)}
 
 
+@app.get("/resources")
+async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
+    result = await session.exec(select(Resource).order_by(Resource.id))
+    paths = await icon_frame_paths(session)
+    return [with_icon_frame(item, paths) for item in result.all()]
+
+
 @app.get("/work-rules")
 async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.id))
@@ -69,18 +76,33 @@ async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(
 
 
 @app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
-async def build(nation_id: int, code: str, session: AsyncSession = Depends(get_session)) -> NationBuilding:
+async def build(nation_id: int, code: str, action: str = "build", session: AsyncSession = Depends(get_session)) -> NationBuilding:
     if await session.get(Nation, nation_id) is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     result = await session.exec(select(BuildingDefinition).where(BuildingDefinition.code == code))
     definition = result.first()
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
+    if action not in {"build", "add"}:
+        raise HTTPException(status_code=422, detail="Unknown building action")
     building = NationBuilding(nation_id=nation_id, building_definition_id=definition.id)
     session.add(building)
+    if action == "add":
+        session.add(NationLog(nation_id=nation_id, message=f"Додано будівлю: {definition.name}", amount=1))
     await session.commit()
     await session.refresh(building)
     return building
+
+
+@app.delete("/nations/{nation_id}/buildings/{building_id}", status_code=204)
+async def remove_building(nation_id: int, building_id: int, session: AsyncSession = Depends(get_session)) -> None:
+    building = await session.get(NationBuilding, building_id)
+    if building is None or building.nation_id != nation_id:
+        raise HTTPException(status_code=404, detail="Built building not found")
+    definition = await session.get(BuildingDefinition, building.building_definition_id)
+    await session.delete(building)
+    session.add(NationLog(nation_id=nation_id, message=f"Прибрано будівлю: {definition.name if definition else building_id}", amount=-1))
+    await session.commit()
 
 
 @app.post("/nations", response_model=Nation)
