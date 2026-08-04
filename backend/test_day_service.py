@@ -2,7 +2,7 @@ import asyncio
 from datetime import date, timedelta
 
 import app.day_service as day_service
-from app.day_service import daily_resource_flow
+from app.day_service import daily_resource_flow, storable_income
 from app.game_rules import WorkType
 from app.main import get_work_rules
 from app.models import Nation, Process, Resource
@@ -71,6 +71,7 @@ async def check() -> None:
     assert flow["general_points"] == {"spending": 0, "income": 0}
     assert flow["food"] == {"spending": 15, "income": 0}
     assert flow["wood"] == {"spending": 0, "income": 5}
+    assert storable_income(5, 2, 6) == 3
 
 
 asyncio.run(check())

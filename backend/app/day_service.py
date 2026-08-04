@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.game_rules import WorkIntensity
+from app.game_rules import BuildingType, WorkIntensity
 from app.models import BuildingDefinition, DayReport, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.settings import (
     BASE_FOOD_SPENDING,
@@ -51,6 +51,12 @@ def daily_resource_flow(
     }
 
 
+def storable_income(income: float, storage_coefficient: float, free_capacity: float) -> float:
+    if storage_coefficient <= 0:
+        return income
+    return min(income, max(0, free_capacity) / storage_coefficient)
+
+
 async def advance_day(
     session: AsyncSession, nation: Nation, report_date: date | None = None
 ) -> DayReport:
@@ -75,8 +81,18 @@ async def advance_day(
         select(NationResource, Resource)
         .join(Resource, NationResource.resource_id == Resource.id)
         .where(NationResource.nation_id == nation.id)
+        .order_by(Resource.id)
     )
     resource_rows = result.all()
+    result = await session.exec(
+        select(BuildingDefinition.capacity)
+        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .where(
+            NationBuilding.nation_id == nation.id,
+            BuildingDefinition.building_type == BuildingType.WAREHOUSE,
+        )
+    )
+    warehouse_capacity = sum(result.all())
     result = await session.exec(select(WorkTypeDefinition))
     work_types = {work_type.code: work_type for work_type in result.all()}
     resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
@@ -121,19 +137,44 @@ async def advance_day(
             }
         )
 
-    available_food = resource_amounts.get("food", 0) + resource_flow["food"]["income"]
+    post_spending = {
+        resource.code: max(0, nation_resource.amount - resource_flow[resource.code]["spending"])
+        for nation_resource, resource in resource_rows
+    }
+    free_storage = warehouse_capacity - sum(
+        post_spending[resource.code] * resource.storage_coefficient
+        for _, resource in resource_rows
+        if resource.code != "general_points"
+    )
+    resources_snapshot = {}
+    uncollected: list[tuple[str, float]] = []
+    for nation_resource, resource in resource_rows:
+        flow = resource_flow[resource.code]
+        income = flow["income"]
+        stored_income = income if resource.code == "general_points" else storable_income(
+            income, resource.storage_coefficient, free_storage
+        )
+        if resource.code != "general_points":
+            free_storage -= stored_income * resource.storage_coefficient
+        if income > stored_income:
+            uncollected.append((resource.name, income - stored_income))
+        nation_resource.amount = post_spending[resource.code] + stored_income
+        resources_snapshot[resource.code] = {
+            "amount": nation_resource.amount,
+            "spending": flow["spending"],
+            "income": stored_income,
+        }
+        session.add(nation_resource)
+    available_food = resource_amounts.get("food", 0) + resources_snapshot["food"]["income"]
     food_consumed = resource_flow["food"]["spending"]
     notes: list[str] = []
     food_shortage = max(0, food_consumed - available_food)
     is_hungry = food_shortage > 0
     if is_hungry:
         notes.append(f"Food shortage: {food_shortage:g}")
-    resources_snapshot = {}
-    for nation_resource, resource in resource_rows:
-        flow = resource_flow[resource.code]
-        nation_resource.amount = max(0, nation_resource.amount + flow["income"] - flow["spending"])
-        resources_snapshot[resource.code] = {"amount": nation_resource.amount, **flow}
-        session.add(nation_resource)
+    if uncollected:
+        details = ", ".join(f"{name} — {amount:g}" for name, amount in uncollected)
+        session.add(NationLog(nation_id=nation.id, day=game_day, message=f"Недостатньо місця на складах: не зібрано {details}", amount=0))
     if is_hungry:
         nation.consecutive_hunger_days += 1
         nation.population_growth_progress = 0
