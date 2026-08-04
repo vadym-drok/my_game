@@ -31,8 +31,14 @@ export default function Home() {
     ? nation.active_population - assignedWorkers
     : 0;
   const currentProcesses = processes.filter((process) => process.status === "active");
-  const historyProcesses = processes.filter((process) => process.status !== "active");
   const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, resource.name]));
+  const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
+  const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
+  const housingProvided = nation?.housing_capacity ?? 0;
+  const housingSufficient = housingProvided >= (nation?.population ?? 0);
+  const storageUsed = nation?.storage?.used ?? 0;
+  const storageCapacity = nation?.storage?.capacity ?? 0;
+  const storageSufficient = storageCapacity >= storageUsed;
   const processMode = workRules.find((workType) => workType.code === selectedWorkType)?.mode || "continuous";
   const growthButtonText = nation?.hunger.active
     ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
@@ -97,7 +103,7 @@ export default function Home() {
     event.preventDefault();
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const mode = form.get("mode");
+    const mode = processMode;
     const workers = Number(form.get("workers"));
     if (workers > availableWorkers) {
       setWorkerError(`Доступно лише ${availableWorkers} працівників.`);
@@ -191,16 +197,20 @@ export default function Home() {
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={() => setGrowthModalOpen(true)}>{growthButtonText}</button></div>
+            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={() => setGrowthModalOpen(true)}>{growthButtonText}</button><a className="buildings-link" href="/buildings">Buildings</a></div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
-              <div><dt>Населення</dt><dd>{nation.population}</dd></div>
+              <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided} житла)</span></dd></div>
               <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
               <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
             </dl>
+            {generalPoints && <dl className="general-points">
+              <div><dt>{generalPoints.name}</dt><dd>{generalPoints.amount}</dd></div>
+              <div className="resource-adjust"><input aria-label={`Змінити ${generalPoints.name}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>ADD</button></div>
+            </dl>}
             <dl className="resources">
-              <div className="resource-head"><dt>Ресурси</dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
-              {(nation.resources || []).map((resource) => (
+              <div className="resource-head"><dt>Ресурси <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip="Використано складського місця / загальна місткість складів" tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
+              {regularResources.map((resource) => (
                 <div className="resource-row" key={resource.code}>
                   <dt>{resource.name}</dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`Змінити ${resource.name}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>ADD</button></div>
                 </div>
@@ -228,7 +238,7 @@ export default function Home() {
 
             <div className="process-panels">
               <section className="card">
-              <h2>Поточні процеси</h2>
+              <div className="section-heading"><h2>Поточні процеси</h2><a href="/history">History</a></div>
               <div className="workforce">
                 <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span></div>
                 <progress value={assignedWorkers} max={nation.active_population || 1} />
@@ -250,20 +260,6 @@ export default function Home() {
                 </ul>
               )}
             </section>
-              <section className="card">
-                <h2>Історія процесів</h2>
-                {historyProcesses.length === 0 ? <p>Історія поки порожня.</p> : (
-                  <ul className="processes history">
-                    {historyProcesses.map((process) => (
-                      <li key={process.id}>
-                        <strong>{process.name}</strong>
-                        <span>{process.work_type} · {process.mode} · {statusLabels[process.status] || process.status}</span>
-                        <span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
             </div>
             <section className="card event-log">
               <h2>Історія подій</h2>

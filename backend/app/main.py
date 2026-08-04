@@ -7,8 +7,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, sync_nation
 from app.db import get_session
-from app.game_rules import WorkMode
-from app.models import DayReport, Nation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
+from app.game_rules import BuildingType, WorkMode
+from app.models import BuildingDefinition, DayReport, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -37,6 +37,38 @@ app.add_middleware(
 async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[WorkTypeDefinition]:
     result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.id))
     return list(result.all())
+
+
+@app.get("/buildings", response_model=list[BuildingDefinition])
+async def list_building_definitions(session: AsyncSession = Depends(get_session)) -> list[BuildingDefinition]:
+    result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.id))
+    return list(result.all())
+
+
+@app.get("/nations/{nation_id}/buildings")
+async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(get_session)) -> list[dict]:
+    result = await session.exec(
+        select(NationBuilding, BuildingDefinition)
+        .join(BuildingDefinition, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .where(NationBuilding.nation_id == nation_id)
+        .order_by(NationBuilding.id.desc())
+    )
+    return [{**definition.model_dump(), "id": building.id, "built_at": building.built_at} for building, definition in result.all()]
+
+
+@app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
+async def build(nation_id: int, code: str, session: AsyncSession = Depends(get_session)) -> NationBuilding:
+    if await session.get(Nation, nation_id) is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    result = await session.exec(select(BuildingDefinition).where(BuildingDefinition.code == code))
+    definition = result.first()
+    if definition is None:
+        raise HTTPException(status_code=404, detail="Building not found")
+    building = NationBuilding(nation_id=nation_id, building_definition_id=definition.id)
+    session.add(building)
+    await session.commit()
+    await session.refresh(building)
+    return building
 
 
 @app.post("/nations", response_model=Nation)
@@ -87,12 +119,37 @@ async def get_nation(
     resource_rows = result.all()
     result = await session.exec(select(WorkTypeDefinition))
     work_types = {work_type.code: work_type for work_type in result.all()}
+    result = await session.exec(
+        select(BuildingDefinition.capacity)
+        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .where(
+            NationBuilding.nation_id == nation_id,
+            BuildingDefinition.building_type == BuildingType.HOUSING,
+        )
+    )
+    housing_capacity = sum(result.all())
+    result = await session.exec(
+        select(BuildingDefinition.capacity)
+        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .where(
+            NationBuilding.nation_id == nation_id,
+            BuildingDefinition.building_type == BuildingType.WAREHOUSE,
+        )
+    )
+    warehouse_capacity = sum(result.all())
+    storage_used = sum(
+        nation_resource.amount * resource.storage_coefficient
+        for nation_resource, resource in resource_rows
+        if resource.code != "general_points"
+    )
     resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
     flow = daily_resource_flow(nation, process_rows, resource_amounts, work_types)
     return nation.model_dump() | {
         "current_day": current_day,
         "active_population": active,
         "passive_population": nation.population - active,
+        "housing_capacity": housing_capacity,
+        "storage": {"used": storage_used, "capacity": warehouse_capacity},
         "resources": [
             {
                 "code": resource.code,

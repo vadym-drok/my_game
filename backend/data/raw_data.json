@@ -13,12 +13,12 @@
     {
       "code": "wood",
       "name": "Дерево",
-      "storage_coefficient": 1
+      "storage_coefficient": 2
     },
     {
       "code": "stone",
       "name": "Камінь",
-      "storage_coefficient": 1
+      "storage_coefficient": 3
     }
   ],
 

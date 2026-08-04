@@ -98,6 +98,13 @@ class NationResource(SQLModel, table=True):
     amount: float = 0
 
 
+class NationBuilding(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    nation_id: int = Field(foreign_key="nation.id", index=True)
+    building_definition_id: int = Field(foreign_key="buildingdefinition.id", index=True)
+    built_at: date = Field(default_factory=date.today)
+
+
 class Process(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
