@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.day_service import daily_resource_flow, sync_nation
+from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, WorkMode
 from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
@@ -20,7 +20,6 @@ from app.schemas import (
 )
 from app.settings import (
     HUNGER_STAGE_ONE_DAYS,
-    DAY_PROGRESS_MODE,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
     active_population,
 )
@@ -41,6 +40,15 @@ async def icon_frame_paths(session: AsyncSession) -> dict[int, str | None]:
 
 def with_icon_frame(item: Resource | WorkTypeDefinition | BuildingDefinition, paths: dict[int, str | None]) -> dict:
     return item.model_dump() | {"icon_frame_image_path": paths.get(item.icon_frame_id)}
+
+
+async def building_capacity(session: AsyncSession, nation_id: int, building_type: BuildingType) -> int:
+    result = await session.exec(
+        select(BuildingDefinition.capacity)
+        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .where(NationBuilding.nation_id == nation_id, BuildingDefinition.building_type == building_type)
+    )
+    return sum(result.all())
 
 
 @app.get("/resources")
@@ -78,7 +86,8 @@ async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(
 
 @app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
 async def build(nation_id: int, code: str, action: str = "add", session: AsyncSession = Depends(get_session)) -> NationBuilding:
-    if await session.get(Nation, nation_id) is None:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     result = await session.exec(select(BuildingDefinition).where(BuildingDefinition.code == code))
     definition = result.first()
@@ -89,7 +98,7 @@ async def build(nation_id: int, code: str, action: str = "add", session: AsyncSe
     building = NationBuilding(nation_id=nation_id, building_definition_id=definition.id)
     session.add(building)
     if action == "add":
-        session.add(NationLog(nation_id=nation_id, message=f"Додано будівлю: {definition.name}", amount=1))
+        session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
     await session.commit()
     await session.refresh(building)
     return building
@@ -138,7 +147,7 @@ async def start_construction(
         nation_resource.amount -= amount
         session.add(nation_resource)
         if amount:
-            session.add(NationLog(nation_id=nation_id, message=f"Будівництво: {definition.name} — {resource.name}", amount=-amount))
+            session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Будівництво: {definition.name} — {resource.name}", amount=-amount))
     process = Process(
         nation_id=nation_id,
         name=f"Будівництво: {definition.name}",
@@ -149,7 +158,7 @@ async def start_construction(
         details={"building_definition_id": definition.id, "construction_cost": cost},
     )
     session.add(process)
-    session.add(NationLog(nation_id=nation_id, message=f"Розпочато будівництво: {definition.name}", amount=0))
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Розпочато будівництво: {definition.name}", amount=0))
     await session.commit()
     await session.refresh(process)
     return process
@@ -161,8 +170,9 @@ async def remove_building(nation_id: int, building_id: int, session: AsyncSessio
     if building is None or building.nation_id != nation_id:
         raise HTTPException(status_code=404, detail="Built building not found")
     definition = await session.get(BuildingDefinition, building.building_definition_id)
+    nation = await session.get(Nation, nation_id)
     await session.delete(building)
-    session.add(NationLog(nation_id=nation_id, message=f"Прибрано будівлю: {definition.name if definition else building_id}", amount=-1))
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Прибрано будівлю: {definition.name if definition else building_id}", amount=-1))
     await session.commit()
 
 
@@ -195,10 +205,7 @@ async def get_nation(
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
     active = active_population(nation.population)
-    current_day = (date.today() - nation.start_date).days + 1
-    if DAY_PROGRESS_MODE == "reload":
-        reports = await session.exec(select(DayReport.id).where(DayReport.nation_id == nation_id))
-        current_day = len(reports.all()) + 1
+    current_day = await nation_current_day(session, nation)
     result = await session.exec(
         select(Process).where(
             Process.nation_id == nation_id, Process.status == "active"
@@ -215,24 +222,8 @@ async def get_nation(
     frames = await icon_frame_paths(session)
     result = await session.exec(select(WorkTypeDefinition))
     work_types = {work_type.code: work_type for work_type in result.all()}
-    result = await session.exec(
-        select(BuildingDefinition.capacity)
-        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
-        .where(
-            NationBuilding.nation_id == nation_id,
-            BuildingDefinition.building_type == BuildingType.HOUSING,
-        )
-    )
-    housing_capacity = sum(result.all())
-    result = await session.exec(
-        select(BuildingDefinition.capacity)
-        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
-        .where(
-            NationBuilding.nation_id == nation_id,
-            BuildingDefinition.building_type == BuildingType.WAREHOUSE,
-        )
-    )
-    warehouse_capacity = sum(result.all())
+    housing_capacity = await building_capacity(session, nation_id, BuildingType.HOUSING)
+    warehouse_capacity = await building_capacity(session, nation_id, BuildingType.WAREHOUSE)
     storage_used = sum(
         nation_resource.amount * resource.storage_coefficient
         for nation_resource, resource in resource_rows
@@ -299,6 +290,8 @@ async def apply_population_growth(
         raise HTTPException(status_code=422, detail="Population growth is not available")
     if data.amount > population_growth_limit(nation.population):
         raise HTTPException(status_code=422, detail="Population growth limit exceeded")
+    if nation.population + data.amount > await building_capacity(session, nation_id, BuildingType.HOUSING):
+        raise HTTPException(status_code=422, detail="Недостатньо житла для збільшення населення")
     nation.population += data.amount
     nation.last_population_growth_date = date.today()
     nation.population_growth_progress = 0
@@ -338,6 +331,7 @@ async def adjust_resource(
         session.add(
             NationLog(
                 nation_id=nation_id,
+                day=await nation_current_day(session, nation),
                 message=f"Ручна зміна: {resource_definition.name}",
                 amount=current_amount - previous_amount,
             )

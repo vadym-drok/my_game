@@ -15,6 +15,13 @@ from app.settings import (
 )
 
 
+async def nation_current_day(session: AsyncSession, nation: Nation) -> int:
+    if DAY_PROGRESS_MODE != "reload":
+        return (date.today() - nation.start_date).days + 1
+    result = await session.exec(select(DayReport.id).where(DayReport.nation_id == nation.id))
+    return len(result.all()) + 1
+
+
 def daily_resource_flow(
     nation: Nation,
     processes: list[Process],
@@ -56,6 +63,7 @@ async def advance_day(
     )
     if existing.first() is not None:
         raise ValueError(f"A report for {report_date.isoformat()} already exists")
+    game_day = await nation_current_day(session, nation)
 
     result = await session.exec(
         select(Process).where(
@@ -100,7 +108,7 @@ async def advance_day(
                     definition = await session.get(BuildingDefinition, building_definition_id)
                     if definition is not None:
                         session.add(NationBuilding(nation_id=nation.id, building_definition_id=definition.id, built_at=report_date))
-                        session.add(NationLog(nation_id=nation.id, message=f"Завершено будівництво: {definition.name}", amount=1))
+                        session.add(NationLog(nation_id=nation.id, day=game_day, message=f"Завершено будівництво: {definition.name}", amount=1))
 
         processes_summary.append(
             {
@@ -137,6 +145,7 @@ async def advance_day(
             session.add(
                 NationLog(
                     nation_id=nation.id,
+                    day=game_day,
                     message="Голод: населення",
                     amount=-population_loss,
                 )

@@ -43,6 +43,7 @@ export default function Home() {
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
   const housingProvided = nation?.housing_capacity ?? 0;
   const housingSufficient = housingProvided >= (nation?.population ?? 0);
+  const populationGrowthLimit = Math.min(nation?.population_growth.max_increase ?? 0, Math.max(0, housingProvided - (nation?.population ?? 0)));
   const storageUsed = nation?.storage?.used ?? 0;
   const storageCapacity = nation?.storage?.capacity ?? 0;
   const storageSufficient = storageCapacity >= storageUsed;
@@ -50,7 +51,7 @@ export default function Home() {
   const growthButtonText = nation?.hunger.active
     ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
     : nation?.population_growth.available
-      ? `Зростання населення (+${nation.population_growth.max_increase})`
+      ? `Зростання населення (+${populationGrowthLimit})`
       : `До поповнення: ${nation?.population_growth.required_days - nation?.population_growth.progress_days} днів`;
 
   useEffect(() => {
@@ -160,6 +161,11 @@ export default function Home() {
     }
   }
 
+  function openPopulationGrowth() {
+    if (!housingSufficient || populationGrowthLimit < 1) return setMessage("Недостатньо житла для збільшення населення.");
+    setGrowthModalOpen(true);
+  }
+
   async function adjustResource(resource) {
     const amount = Number(resourceAmounts[resource]);
     if (!Number.isInteger(amount)) {
@@ -204,7 +210,7 @@ export default function Home() {
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={() => setGrowthModalOpen(true)}>{growthButtonText}</button><a className="buildings-link" href="/buildings">Buildings</a></div>
+            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="buildings-link" href="/buildings">Buildings</a></div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
               <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
@@ -271,16 +277,17 @@ export default function Home() {
             <section className="card event-log">
               <h2>Історія подій</h2>
               {logs.length === 0 ? <p>Подій поки немає.</p> : <ul>
-                {logs.map((log) => <li key={log.id}><span>{log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
+                {logs.slice(0, 10).map((log) => <li key={log.id}><span>День {log.day} · {log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
+              <a className="log-history-link" href="/logs">Log history</a>
             </section>
           </section>
 
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
               <h2>Зростання населення</h2>
-              <p>Доступно до +{nation.population_growth.max_increase} осіб.</p>
-              <label>Додати населення<input type="number" min="0" max={nation.population_growth.max_increase} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
+              <p>Доступно до +{populationGrowthLimit} осіб.</p>
+              <label>Додати населення<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
               <div><button type="button" onClick={() => setGrowthModalOpen(false)}>Скасувати</button><button>Підтвердити</button></div>
             </form>
           </div>}

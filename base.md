@@ -60,3 +60,7 @@ Resources:
 - settings.js
 - settings.py
 - raw_data.json
+
+---
+
+- [ ] Почистити зайві дата міграції та хвости

@@ -36,6 +36,8 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .processes button { background: transparent; border-color: #748a70; color: #d8e3d2; padding: 5px 8px; }
 .event-log ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .event-log li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #425240; padding-top: 10px; }
+.log-history-link { display: inline-block; margin-top: 16px; padding: 9px; border-radius: 7px; background: #a5ca78; color: #172017; font-weight: bold; text-decoration: none; }
+.log-history-link:hover { background: #c0e48e; }
 .log-negative, .message.danger { color: #ff9b8a; }
 .log-positive { color: #a5ca78; }
 .message { color: #ffd287; }

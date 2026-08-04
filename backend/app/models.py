@@ -100,6 +100,7 @@ class DayReport(SQLModel, table=True):
 class NationLog(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
+    day: int
     message: str
     amount: float
     created_at: datetime = Field(default_factory=datetime.now)
