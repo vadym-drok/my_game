@@ -207,7 +207,7 @@ export default function Home() {
             <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={() => setGrowthModalOpen(true)}>{growthButtonText}</button><a className="buildings-link" href="/buildings">Buildings</a></div>
             <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
             <dl className="population">
-              <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided} житла)</span></dd></div>
+              <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
               <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
               <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
             </dl>
