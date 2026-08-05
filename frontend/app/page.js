@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
 import { ICON_SIZES } from "./settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
@@ -17,6 +18,9 @@ function ItemIcon({ item, type = "resource" }) {
 export default function Home() {
   const t = useTranslations();
   const dataT = useTranslations("Data");
+  const pathname = usePathname();
+  const router = useRouter();
+  const isNationSelector = pathname === "/nations";
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
   const [nations, setNations] = useState(null);
@@ -59,10 +63,14 @@ export default function Home() {
       : t("Home.untilGrowth", {days: nation?.population_growth.required_days - nation?.population_growth.progress_days});
 
   useEffect(() => {
+    if (isNationSelector) {
+      loadNations();
+      return;
+    }
     const savedId = window.localStorage.getItem("nationId");
     if (savedId) loadNation(savedId, true);
-    else loadNations();
-  }, []);
+    else router.replace("/nations");
+  }, [isNationSelector]);
 
   async function request(path, options) {
     const response = await fetch(`${API_URL}${path}`, {
@@ -89,6 +97,7 @@ export default function Home() {
       setWorkRules(rules);
       const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
       setMessage(populationLoss ? t("System.populationLoss", {amount: populationLoss.split(": ")[1]}) : reports.length ? t("System.updatedDays", {days: reports.length}) : "");
+      if (isNationSelector) router.push("/");
     } catch (error) {
       setMessage(error.message);
     }
@@ -180,8 +189,7 @@ export default function Home() {
   }
 
   function openNationSelector() {
-    window.localStorage.removeItem("nationId");
-    window.location.href = "/";
+    router.push("/nations");
   }
 
   async function adjustResource(resource) {
@@ -231,7 +239,7 @@ export default function Home() {
 
       {message && <p className="message">{message}</p>}
 
-      {!nation ? (
+      {isNationSelector ? (
         <section className="card">
           <h2>{t("Home.newNation")}</h2>
           <form onSubmit={createNation}>
@@ -242,7 +250,7 @@ export default function Home() {
           </form>
           <div className="load-form"><h2>{t("Home.createdNations")}</h2>{nations === null ? <p>{t("Common.loading")}</p> : nations.length === 0 ? <p>{t("Home.noNations")}</p> : <ul className="nation-list">{nations.map((item) => <li key={item.id}><span><small>#{item.id}</small> {item.name} <small>({t("Common.day", {day: item.current_day})})</small></span><button className="page-link" type="button" onClick={() => loadNation(item.id)}>{t("Common.open")}</button></li>)}</ul>}</div>
         </section>
-      ) : (
+      ) : !nation ? <p>{t("Common.loading")}</p> : (
         <>
           <section className="card nation">
             <div><p className="eyebrow">{t("Home.nationNumber", {id: nation.id})}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">{t("Nav.buildings")}</a></div>
