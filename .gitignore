@@ -6,3 +6,7 @@ __pycache__/
 frontend/.next/
 frontend/node_modules/
 frontend/public/images/
+
+start_raw_data.json
+plan_info.md
+
