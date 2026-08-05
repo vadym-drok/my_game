@@ -2,28 +2,20 @@
 
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
-import { usePathname, useRouter } from "next/navigation";
-import { ICON_SIZES } from "./settings";
+import { useRouter } from "next/navigation";
+import ItemIcon from "../components/nation/ItemIcon";
+import NationHeader from "../components/nation/NationHeader";
+import PopulationSummary from "../components/nation/PopulationSummary";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 const intensityCoefficients = { BASE: 1, LIGHT: 1.5, STANDARD: 2, MEDIUM: 2.5, HEAVY: 3 };
-function ItemIcon({ item, type = "resource" }) {
-  const t = useTranslations("Data");
-  const [missing, setMissing] = useState(!item.image_path);
-  const category = type === "work_type" ? "workTypes" : "resources";
-  const name = t(`${category}.${item.code}`, {default: item.name || item.code});
-  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={name} onError={() => setMissing(true)} />}</span>;
-}
 
 export default function Home() {
   const t = useTranslations();
   const dataT = useTranslations("Data");
-  const pathname = usePathname();
   const router = useRouter();
-  const isNationSelector = pathname === "/nations";
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
-  const [nations, setNations] = useState(null);
   const [processes, setProcesses] = useState([]);
   const [logs, setLogs] = useState([]);
   const [workRules, setWorkRules] = useState([]);
@@ -63,14 +55,10 @@ export default function Home() {
       : t("Home.untilGrowth", {days: nation?.population_growth.required_days - nation?.population_growth.progress_days});
 
   useEffect(() => {
-    if (isNationSelector) {
-      loadNations();
-      return;
-    }
     const savedId = window.localStorage.getItem("nationId");
     if (savedId) loadNation(savedId, true);
     else router.replace("/nations");
-  }, [isNationSelector]);
+  }, []);
 
   async function request(path, options) {
     const response = await fetch(`${API_URL}${path}`, {
@@ -97,33 +85,6 @@ export default function Home() {
       setWorkRules(rules);
       const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
       setMessage(populationLoss ? t("System.populationLoss", {amount: populationLoss.split(": ")[1]}) : reports.length ? t("System.updatedDays", {days: reports.length}) : "");
-      if (isNationSelector) router.push("/");
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
-  async function loadNations() {
-    try {
-      setNations(await request("/nations"));
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
-  async function createNation(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    try {
-      const data = await request("/nations", {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.get("name"),
-          population: Number(form.get("population")),
-          resources: { general_points: Number(form.get("general_points")) },
-        }),
-      });
-      await loadNation(data.id);
     } catch (error) {
       setMessage(error.message);
     }
@@ -239,27 +200,11 @@ export default function Home() {
 
       {message && <p className="message">{message}</p>}
 
-      {isNationSelector ? (
-        <section className="card">
-          <h2>{t("Home.newNation")}</h2>
-          <form onSubmit={createNation}>
-            <label>{t("Home.name")}<input name="name" required defaultValue={t("Home.newNation")} /></label>
-            <label>{t("Home.population")}<input name="population" type="number" min="0" defaultValue="10" /></label>
-            <label>{t("Home.generalPoints")}<input name="general_points" type="number" min="0" defaultValue="30" /></label>
-            <button>{t("Home.create")}</button>
-          </form>
-          <div className="load-form"><h2>{t("Home.createdNations")}</h2>{nations === null ? <p>{t("Common.loading")}</p> : nations.length === 0 ? <p>{t("Home.noNations")}</p> : <ul className="nation-list">{nations.map((item) => <li key={item.id}><span><small>#{item.id}</small> {item.name} <small>({t("Common.day", {day: item.current_day})})</small></span><button className="page-link" type="button" onClick={() => loadNation(item.id)}>{t("Common.open")}</button></li>)}</ul>}</div>
-        </section>
-      ) : !nation ? <p>{t("Common.loading")}</p> : (
+      {!nation ? <p>{t("Common.loading")}</p> : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">{t("Home.nationNumber", {id: nation.id})}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">{t("Nav.buildings")}</a></div>
-            <p className="start-date"><span>{t("Common.day", {day: nation.current_day})}</span></p>
-            <dl className="population">
-              <div><dt>{t("Home.population")}</dt><dd className="tooltip" data-tooltip={t("Home.populationHousingHint")} tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
-              <div><dt>{t("Home.activePopulation")}</dt><dd>{nation.active_population}</dd></div>
-              <div><dt>{t("Home.passivePopulation")}</dt><dd>{nation.passive_population}</dd></div>
-            </dl>
+            <NationHeader nation={nation} growthButtonText={growthButtonText} onGrowth={openPopulationGrowth} />
+            <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} />
             {generalPoints && <dl className="general-points">
               <div><dt><ItemIcon item={generalPoints} /></dt><dd>{generalPoints.amount}</dd></div>
               <div className="resource-adjust"><button type="button" onClick={openSpend}>{t("Spend.button")}</button><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button></div>
@@ -319,11 +264,10 @@ export default function Home() {
             </section>
             </div>
             <section className="card event-log">
-              <h2>{t("Home.eventHistory")}</h2>
+              <div className="section-heading"><h2>{t("Home.eventHistory")}</h2><a className="page-link" href="/logs">{t("Nav.logHistory")}</a></div>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
                 {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
-              <a className="page-link log-history-link" href="/logs">{t("Nav.logHistory")}</a>
             </section>
           </section>
 
