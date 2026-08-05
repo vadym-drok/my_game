@@ -8,36 +8,21 @@ import NationHeader from "../components/nation/NationHeader";
 import PopulationSummary from "../components/nation/PopulationSummary";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
-const intensityCoefficients = { BASE: 1, LIGHT: 1.5, STANDARD: 2, MEDIUM: 2.5, HEAVY: 3 };
-
 export default function Home() {
   const t = useTranslations();
   const dataT = useTranslations("Data");
   const router = useRouter();
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
-  const [processes, setProcesses] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [workRules, setWorkRules] = useState([]);
-  const [workInfoOpen, setWorkInfoOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [workerError, setWorkerError] = useState("");
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
   const [spendModalOpen, setSpendModalOpen] = useState(false);
   const [manualAdjustmentOpen, setManualAdjustmentOpen] = useState(false);
   const [purchaseAmounts, setPurchaseAmounts] = useState({});
   const [resourceAmounts, setResourceAmounts] = useState({});
-  const [selectedWorkType, setSelectedWorkType] = useState("food_gathering");
-  const assignedWorkers = processes
-    .filter((process) => process.status === "active")
-    .reduce((total, process) => total + process.assigned_workers, 0);
-  const availableWorkers = nation
-    ? nation.active_population - assignedWorkers
-    : 0;
-  const currentProcesses = processes.filter((process) => process.status === "active");
   const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, dataT(`resources.${resource.code}`, {default: resource.name})]));
-  const workTypesByCode = Object.fromEntries(workRules.map((workType) => [workType.code, workType]));
   const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
   const purchaseTotal = regularResources.reduce((total, resource) => total + (Number(purchaseAmounts[resource.code]) || 0), 0);
@@ -47,7 +32,6 @@ export default function Home() {
   const storageUsed = nation?.storage?.used ?? 0;
   const storageCapacity = nation?.storage?.capacity ?? 0;
   const storageSufficient = storageCapacity >= storageUsed;
-  const processMode = workRules.find((workType) => workType.code === selectedWorkType)?.mode || "continuous";
   const growthButtonText = nation?.hunger.active
     ? t("Home.hunger", {days: nation.hunger.days, stageDays: nation.hunger.stage_days})
     : nation?.population_growth.available
@@ -74,56 +58,13 @@ export default function Home() {
     try {
       const reports = await request(`/nations/${id}/sync?reload_tick=${reloadTick}`, { method: "POST" });
       const data = await request(`/nations/${id}`);
-      const activeProcesses = await request(`/nations/${id}/processes`);
       const eventLogs = await request(`/nations/${id}/logs`);
-      const rules = await request("/work-rules");
       setNationId(String(id));
       window.localStorage.setItem("nationId", String(id));
       setNation(data);
-      setProcesses(activeProcesses);
       setLogs(eventLogs);
-      setWorkRules(rules);
       const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
       setMessage(populationLoss ? t("System.populationLoss", {amount: populationLoss.split(": ")[1]}) : reports.length ? t("System.updatedDays", {days: reports.length}) : "");
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
-  async function createProcess(event) {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const mode = processMode;
-    const workers = Number(form.get("workers"));
-    if (workers > availableWorkers) {
-      setWorkerError(t("Home.availableWorkers", {amount: availableWorkers}));
-      return;
-    }
-    try {
-      await request(`/nations/${nationId}/processes`, {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.get("name"),
-          work_type: form.get("work_type"),
-          mode,
-          assigned_workers: workers,
-          required_worker_days:
-            mode === "finite" ? Number(form.get("required_worker_days")) : null,
-        }),
-      });
-      formElement.reset();
-      setWorkerError("");
-      await loadNation();
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
-
-  async function updateProcess(id, body) {
-    try {
-      await request(`/processes/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-      await loadNation();
     } catch (error) {
       setMessage(error.message);
     }
@@ -216,55 +157,11 @@ export default function Home() {
             <button className="manual-adjustment-button" type="button" onClick={() => setManualAdjustmentOpen(true)}>Manual Adjustment</button>
           </section>
 
-          <section className="grid">
-            <section className="card">
-              <h2>{t("Home.newProcess")}</h2>
-              <form onSubmit={createProcess}>
-                <label>{t("Home.name")}<input name="name" required placeholder={t("Home.exampleProcess")} /></label>
-                <label>{t("Home.work")}<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{dataT(`workTypes.${type.code}`, {default: type.name})}</option>)}</select></label>
-                <button className="work-info-button" type="button" aria-label={t("Home.workEffects")} title={t("Home.workEffects")} onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
-                {workInfoOpen && <ul className="work-rules">
-                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} type="work_type" /></strong><span className="log-negative">{t("Home.foodIntensity", {value: intensityCoefficients[rule.intensity]})}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
-                </ul>}
-                <p>{t("Home.mode", {mode: t(`Modes.${processMode}`)})}</p>
-                <label className={workerError ? "invalid" : ""}>{t("Home.workers")}<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? t("Home.availableWorkers", {amount: availableWorkers}) : "")} /></label>
-                {workerError && <p className="field-error" role="alert">{workerError}</p>}
-                {processMode === "finite" && <label>{t("Home.workerDays")}<input name="required_worker_days" type="number" min="1" defaultValue="10" required /></label>}
-                <button>{t("Home.start")}</button>
-              </form>
-            </section>
-
-            <div className="process-panels">
-              <section className="card">
-              <div className="section-heading"><h2>{t("Home.currentProcesses")}</h2><a className="page-link" href="/history">{t("Nav.history")}</a></div>
-              <div className="workforce">
-                <div><span>{t("Home.assigned", {assigned: assignedWorkers, total: nation.active_population})}</span></div>
-                <progress value={assignedWorkers} max={nation.active_population || 1} />
-              </div>
-              {currentProcesses.length === 0 ? <p>{t("Home.noActiveProcesses")}</p> : (
-                <ul className="processes">
-                  {currentProcesses.map((process) => (
-                    <li key={process.id}>
-                      <strong>{process.name}</strong>
-                      <span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{t(`Modes.${process.mode}`)}</span>
-                      <span>{t("History.workers", {amount: process.assigned_workers})}{process.mode === "finite" && ` · ${t("History.workerDays", {completed: process.completed_worker_days, required: process.required_worker_days})}`}</span>
-                      <div>
-                        <button onClick={() => updateProcess(process.id, { assigned_workers: Math.max(0, process.assigned_workers - 1) })}>−</button>
-                        <button onClick={() => updateProcess(process.id, { assigned_workers: process.assigned_workers + 1 })}>+</button>
-                        <button onClick={() => updateProcess(process.id, { status: "stopped" })}>{t("Home.stop")}</button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-            </div>
-            <section className="card event-log">
+          <section className="card event-log overview-event-log">
               <div className="section-heading"><h2>{t("Home.eventHistory")}</h2><a className="page-link" href="/logs">{t("Nav.logHistory")}</a></div>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
                 {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
-            </section>
           </section>
 
           {growthModalOpen && <div className="modal-backdrop">

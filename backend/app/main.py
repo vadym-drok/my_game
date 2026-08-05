@@ -481,7 +481,7 @@ async def update_process(
         )
     )
     assigned_workers = data.assigned_workers if data.assigned_workers is not None else process.assigned_workers
-    status = data.status if data.status is not None else process.status
+    status = data.status.value if data.status is not None else process.status
     other_workers = sum(
         item.assigned_workers for item in result.all() if item.id != process.id
     )
@@ -490,7 +490,7 @@ async def update_process(
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
     for field, value in data.model_dump(exclude_none=True).items():
-        setattr(process, field, value)
+        setattr(process, field, status if field == "status" else value)
     session.add(process)
     await session.commit()
     await session.refresh(process)
