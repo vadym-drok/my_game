@@ -29,6 +29,7 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .building span { color: #b9c3b3; }
 .building-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .building-buttons { display: flex; gap: 8px; }
+.built-building-types { display: grid; gap: 18px; }.building-type { border-top: 1px solid #425240; padding-top: 12px; }.building-type h3 { margin: 0 0 10px; font-size: 1rem; }.building-icon-grid { display: flex; flex-wrap: wrap; gap: 8px; }.building-icon-button { padding: 0; border: 0; background: transparent; line-height: 0; }.building-icon-button:hover, .building-icon-button:focus-visible { background: transparent; outline: 2px solid #a5ca78; outline-offset: 3px; }.building-type p { margin: 10px 0 0; color: #b9c3b3; font-size: .9rem; }.building-details-modal { position: relative; display: grid; justify-items: center; text-align: center; }.building-details-modal .modal-close { position: absolute; top: 10px; right: 10px; padding: 2px 9px; font-size: 1.4rem; line-height: 1; }.building-details-modal .remove-button { justify-self: center; background: #a5ca78; color: #172017; }
 .nation-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .nation-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid #425240; padding-top: 10px; }
 .nation-list small { color: #aab9a4; }
