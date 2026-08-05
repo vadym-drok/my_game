@@ -44,5 +44,9 @@ class ResourceAdjustment(SQLModel):
     amount: int
 
 
+class ResourcePurchase(SQLModel):
+    resources: dict[str, int]
+
+
 class ConstructionStart(SQLModel):
     assigned_workers: int = Field(ge=1)

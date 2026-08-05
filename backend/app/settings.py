@@ -6,6 +6,7 @@ POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS = 5
 POPULATION_GROWTH_PERCENT = 10
 HUNGER_STAGE_ONE_DAYS = 3
 DAY_PROGRESS_MODE = "reload"  # Switch to "calendar" for real dates.  ("reload" / "calendar")
+GENERAL_POINT_RESOURCE_COST = 1
 
 
 def active_population(population: int) -> int:

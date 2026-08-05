@@ -28,6 +28,8 @@ export default function Home() {
   const [workerError, setWorkerError] = useState("");
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
+  const [spendModalOpen, setSpendModalOpen] = useState(false);
+  const [purchaseAmounts, setPurchaseAmounts] = useState({});
   const [resourceAmounts, setResourceAmounts] = useState({});
   const [selectedWorkType, setSelectedWorkType] = useState("food_gathering");
   const assignedWorkers = processes
@@ -41,6 +43,7 @@ export default function Home() {
   const workTypesByCode = Object.fromEntries(workRules.map((workType) => [workType.code, workType]));
   const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
+  const purchaseTotal = regularResources.reduce((total, resource) => total + (Number(purchaseAmounts[resource.code]) || 0), 0);
   const housingProvided = nation?.housing_capacity ?? 0;
   const housingSufficient = housingProvided >= (nation?.population ?? 0);
   const populationGrowthLimit = Math.min(nation?.population_growth.max_increase ?? 0, Math.max(0, housingProvided - (nation?.population ?? 0)));
@@ -198,6 +201,26 @@ export default function Home() {
     }
   }
 
+  function openSpend() {
+    setPurchaseAmounts({});
+    setSpendModalOpen(true);
+  }
+
+  async function purchaseResources(event) {
+    event.preventDefault();
+    if (!purchaseTotal) return setMessage(t("Spend.nothing"));
+    try {
+      await request(`/nations/${nationId}/resource-purchases`, {
+        method: "POST",
+        body: JSON.stringify({resources: purchaseAmounts}),
+      });
+      setSpendModalOpen(false);
+      await loadNation();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -222,7 +245,7 @@ export default function Home() {
         <>
           <section className="card nation">
             <div><p className="eyebrow">{t("Home.nationNumber", {id: nation.id})}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">{t("Nav.buildings")}</a></div>
-            <p className="start-date"><span>{t("Common.day", {day: nation.current_day})}</span>{t("Home.startDate", {date: nation.start_date})}</p>
+            <p className="start-date"><span>{t("Common.day", {day: nation.current_day})}</span></p>
             <dl className="population">
               <div><dt>{t("Home.population")}</dt><dd className="tooltip" data-tooltip={t("Home.populationHousingHint")} tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
               <div><dt>{t("Home.activePopulation")}</dt><dd>{nation.active_population}</dd></div>
@@ -230,7 +253,7 @@ export default function Home() {
             </dl>
             {generalPoints && <dl className="general-points">
               <div><dt><ItemIcon item={generalPoints} /></dt><dd>{generalPoints.amount}</dd></div>
-              <div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button></div>
+              <div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button><button type="button" onClick={openSpend}>{t("Spend.button")}</button></div>
             </dl>}
             <dl className="resources">
               <div className="resource-head"><dt>{t("Home.resources")} <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>{t("Home.stock")}</span><span>{t("Home.perDaySpending")}</span><span>{t("Home.perDayIncome")}</span><span>{t("Home.change")}</span></div>
@@ -288,7 +311,7 @@ export default function Home() {
             <section className="card event-log">
               <h2>{t("Home.eventHistory")}</h2>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
-                {logs.slice(0, 10).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
+                {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
               <a className="page-link log-history-link" href="/logs">{t("Nav.logHistory")}</a>
             </section>
@@ -300,6 +323,15 @@ export default function Home() {
               <p>{t("Home.availableUpTo", {amount: populationGrowthLimit})}</p>
               <label>{t("Home.addPopulation")}<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
               <div><button type="button" onClick={() => setGrowthModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Common.confirm")}</button></div>
+            </form>
+          </div>}
+          {spendModalOpen && <div className="modal-backdrop">
+            <form className="modal" onSubmit={purchaseResources}>
+              <h2>{t("Spend.title")}</h2>
+              <p>{t("Spend.available", {amount: generalPoints.amount})}</p>
+              <p>{t("Spend.total", {amount: purchaseTotal})}</p>
+              <div className="purchase-list">{regularResources.map((resource) => <label key={resource.code}><ItemIcon item={resource} />{t("Spend.amount", {resource: resourceNames[resource.code]})}<input type="number" min="0" step="1" value={purchaseAmounts[resource.code] ?? ""} onChange={(event) => setPurchaseAmounts({...purchaseAmounts, [resource.code]: event.target.value})} /></label>)}</div>
+              <div><button type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Spend.confirm")}</button></div>
             </form>
           </div>}
         </>

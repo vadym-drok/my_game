@@ -15,11 +15,13 @@ from app.schemas import (
     ConstructionStart,
     PopulationGrowth,
     ResourceAdjustment,
+    ResourcePurchase,
     ProcessCreate,
     ProcessUpdate,
 )
 from app.settings import (
     HUNGER_STAGE_ONE_DAYS,
+    GENERAL_POINT_RESOURCE_COST,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
     active_population,
 )
@@ -344,6 +346,57 @@ async def adjust_resource(
             )
         )
     session.add(nation_resource)
+    await session.commit()
+    await session.refresh(nation)
+    return nation
+
+
+@app.post("/nations/{nation_id}/resource-purchases", response_model=Nation)
+async def purchase_resources(
+    nation_id: int,
+    data: ResourcePurchase,
+    session: AsyncSession = Depends(get_session),
+) -> Nation:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    if any(amount < 0 for amount in data.resources.values()):
+        raise HTTPException(status_code=422, detail="Purchase amounts cannot be negative")
+    purchases = {code: amount for code, amount in data.resources.items() if amount > 0}
+    if not purchases:
+        raise HTTPException(status_code=422, detail="Choose at least one resource")
+    result = await session.exec(
+        select(NationResource, Resource)
+        .join(Resource, NationResource.resource_id == Resource.id)
+        .where(NationResource.nation_id == nation_id)
+    )
+    resources = {resource.code: (nation_resource, resource) for nation_resource, resource in result.all()}
+    points, _ = resources.get("general_points", (None, None))
+    if points is None:
+        raise HTTPException(status_code=422, detail="General points are unavailable")
+    for code in purchases:
+        if code == "general_points" or code not in resources:
+            raise HTTPException(status_code=422, detail="Unknown purchasable resource")
+    total_cost = sum(purchases.values()) * GENERAL_POINT_RESOURCE_COST
+    if points.amount < total_cost:
+        raise HTTPException(status_code=422, detail="Not enough general points")
+    used_storage = sum(
+        nation_resource.amount * resource.storage_coefficient
+        for code, (nation_resource, resource) in resources.items()
+        if code != "general_points"
+    )
+    purchased_storage = sum(purchases[code] * resources[code][1].storage_coefficient for code in purchases)
+    if used_storage + purchased_storage > await building_capacity(session, nation_id, BuildingType.WAREHOUSE):
+        raise HTTPException(status_code=422, detail="Not enough warehouse capacity")
+    points.amount -= total_cost
+    session.add(points)
+    day = await nation_current_day(session, nation)
+    session.add(NationLog(nation_id=nation_id, day=day, message="Purchase: general points", amount=-total_cost))
+    for code, amount in purchases.items():
+        nation_resource, resource = resources[code]
+        nation_resource.amount += amount
+        session.add(nation_resource)
+        session.add(NationLog(nation_id=nation_id, day=day, message=f"Purchase: {resource.name}", amount=amount))
     await session.commit()
     await session.refresh(nation)
     return nation
