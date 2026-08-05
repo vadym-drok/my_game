@@ -2,6 +2,7 @@ import "./globals.css";
 import {NextIntlClientProvider} from "next-intl";
 import {getLocale, getTranslations} from "next-intl/server";
 import LanguageSwitcher from "./language-switcher";
+import AppNav from "../components/AppNav";
 
 export async function generateMetadata() {
   const t = await getTranslations();
@@ -16,7 +17,7 @@ export default async function RootLayout({ children }) {
   const locale = await getLocale();
   return (
     <html lang={locale}>
-      <body><NextIntlClientProvider><LanguageSwitcher />{children}</NextIntlClientProvider></body>
+      <body><NextIntlClientProvider><AppNav /><LanguageSwitcher />{children}</NextIntlClientProvider></body>
     </html>
   );
 }

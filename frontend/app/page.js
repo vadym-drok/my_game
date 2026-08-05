@@ -149,10 +149,6 @@ export default function Home() {
     setGrowthModalOpen(true);
   }
 
-  function openNationSelector() {
-    router.push("/nations");
-  }
-
   async function adjustResource(resource) {
     const amount = Number(resourceAmounts[resource]);
     if (!Number.isInteger(amount)) {
@@ -195,7 +191,7 @@ export default function Home() {
     <main>
       <header>
         <p className="eyebrow">{t("Common.nationSimulator")}</p>
-        <div className="app-title"><h1>{t("Home.title")}</h1>{nation && <button className="page-link" type="button" onClick={openNationSelector}>{t("Nav.nations")}</button>}</div>
+        <div className="app-title"><h1>{t("Home.title")}</h1></div>
       </header>
 
       {message && <p className="message">{message}</p>}

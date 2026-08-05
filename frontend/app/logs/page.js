@@ -20,7 +20,7 @@ export default function LogHistory() {
   }, []);
 
   return <main>
-    <header className="page-header"><div><p className="eyebrow">{t("Common.nationSimulator")}</p><h1>{t("Logs.title")}</h1><a className="page-link back-link" href="/">{t("Common.backToNation")}</a></div>{nation && <p className="page-day">{t("Common.day", {day: nation.current_day})}</p>}</header>
+    <header className="page-header"><div><p className="eyebrow">{t("Common.nationSimulator")}</p><h1>{t("Logs.title")}</h1></div>{nation && <p className="page-day">{t("Common.day", {day: nation.current_day})}</p>}</header>
     <section className="card event-log">
       {logs === null ? <p>{t("Common.loading")}</p> : logs.length === 0 ? <p>{t("Logs.empty")}</p> : <ul>{logs.map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}</ul>}
     </section>
