@@ -1,24 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {useTranslations} from "next-intl";
 import { ICON_SIZES } from "../settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 function ItemIcon({ item, type = "building" }) {
+  const t = useTranslations("Data");
   const [missing, setMissing] = useState(!item.image_path);
-  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
+  const category = type === "resource" ? "resources" : "buildings";
+  const name = t(`${category}.${item.code}`, {default: item.name || item.code});
+  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={name} onError={() => setMissing(true)} />}</span>;
 }
 
 function ConstructionCost({ cost, resources }) {
+  const t = useTranslations("Buildings");
   const resourceByCode = Object.fromEntries(resources.map((resource) => [resource.code, resource]));
   const entries = Object.entries(cost?.resources || {});
   const workerDays = cost?.worker_days || 0;
-  if (entries.length === 0 && workerDays === 0) return <span className="building-cost">Вартість ще не задана.</span>;
-  return <div className="building-cost"><span>Вартість:</span>{entries.map(([code, amount]) => <span className="cost-resource" key={code}><ItemIcon item={resourceByCode[code] || { code, name: code }} type="resource" />{amount}</span>)}{workerDays > 0 && <span>{workerDays} людино-днів</span>}</div>;
+  if (entries.length === 0 && workerDays === 0) return <span className="building-cost">{t("costMissing")}</span>;
+  return <div className="building-cost"><span>{t("cost")}</span>{entries.map(([code, amount]) => <span className="cost-resource" key={code}><ItemIcon item={resourceByCode[code] || { code, name: code }} type="resource" />{amount}</span>)}{workerDays > 0 && <span>{t("workerDays", {amount: workerDays})}</span>}</div>;
 }
 
 export default function Buildings() {
+  const t = useTranslations();
+  const dataT = useTranslations("Data");
   const [definitions, setDefinitions] = useState([]);
   const [built, setBuilt] = useState([]);
   const [resources, setResources] = useState([]);
@@ -47,21 +54,21 @@ export default function Buildings() {
   function build(building) {
     const costs = Object.entries(building.construction_cost?.resources || {});
     const unavailable = costs.find(([code, amount]) => (resourceAmounts[code] || 0) < amount);
-    if (unavailable) return setMessage(`Недостатньо ресурсу: ${unavailable[0]}.`);
-    if (!building.construction_cost?.worker_days) return setMessage("Для будівлі не задані людино-дні.");
-    if (!availableWorkers) return setMessage("Немає доступних працівників.");
+    if (unavailable) return setMessage(t("Buildings.notEnoughResource", {resource: dataT(`resources.${unavailable[0]}`)}));
+    if (!building.construction_cost?.worker_days) return setMessage(t("Buildings.missingWorkerDays"));
+    if (!availableWorkers) return setMessage(t("Buildings.noWorkers"));
     setConstructionWorkers(1); setBuildingToConstruct(building); setMessage("");
   }
   async function startConstruction(event) {
     event.preventDefault();
-    if (Number(constructionWorkers) < 1 || Number(constructionWorkers) > availableWorkers) return setMessage(`Доступно працівників: ${availableWorkers}.`);
+    if (Number(constructionWorkers) < 1 || Number(constructionWorkers) > availableWorkers) return setMessage(t("Buildings.workersAvailable", {amount: availableWorkers}));
     const response = await fetch(`${API_URL}/nations/${nationId}/buildings/${buildingToConstruct.code}/construction`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assigned_workers: Number(constructionWorkers) }) });
     const data = await response.json();
-    if (!response.ok) return setMessage(data.detail || "Не вдалося розпочати будівництво.");
+    if (!response.ok) return setMessage(data.detail || t("Buildings.startFailed"));
     setBuildingToConstruct(null); await load(nationId);
   }
   async function add(code) { await fetch(`${API_URL}/nations/${nationId}/buildings/${code}?action=add`, { method: "POST" }); await load(nationId); }
   async function remove(buildingId) { await fetch(`${API_URL}/nations/${nationId}/buildings/${buildingId}`, { method: "DELETE" }); await load(nationId); }
 
-  return <main><header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Buildings</h1><a className="page-link back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>{message && <p className="message danger">{message}</p>}<section className="grid"><section className="card"><h2>Доступні будівлі</h2>{definitions.map((building) => <div className="building" key={building.code}><strong><ItemIcon item={building} /></strong><span>{building.building_type} · {building.capacity}</span><ConstructionCost cost={building.construction_cost} resources={resources} /><div className="building-buttons"><button onClick={() => build(building)}>Build</button><button onClick={() => add(building.code)}>ADD</button></div></div>)}</section><section className="card"><h2>Побудовані будівлі</h2>{built.length === 0 ? <p>Ще нічого не побудовано.</p> : built.map((building) => <div className="building" key={building.id}><div className="building-actions"><strong><ItemIcon item={building} /></strong><button onClick={() => remove(building.id)}>Remove</button></div><span>{building.building_type} · {building.capacity}</span></div>)}</section></section>{buildingToConstruct && <div className="modal-backdrop"><form className="modal" onSubmit={startConstruction}><h2>Будівництво</h2><p>Доступно працівників: {availableWorkers}.</p><ConstructionCost cost={buildingToConstruct.construction_cost} resources={resources} /><label>Працівники<input type="number" min="1" max={availableWorkers} value={constructionWorkers} onChange={(event) => setConstructionWorkers(event.target.value)} required /></label><div><button type="button" onClick={() => setBuildingToConstruct(null)}>Скасувати</button><button>Розпочати</button></div></form></div>}</main>;
+  return <main><header className="page-header"><div><p className="eyebrow">{t("Common.nationSimulator")}</p><h1>{t("Buildings.title")}</h1><a className="page-link back-link" href="/">{t("Common.backToNation")}</a></div>{nation && <p className="page-day">{t("Common.day", {day: nation.current_day})}</p>}</header>{message && <p className="message danger">{message}</p>}<section className="grid"><section className="card"><h2>{t("Buildings.available")}</h2>{definitions.map((building) => <div className="building" key={building.code}><strong><ItemIcon item={building} /></strong><span>{dataT(`buildingTypes.${building.building_type}`)} · {building.capacity}</span><ConstructionCost cost={building.construction_cost} resources={resources} /><div className="building-buttons"><button onClick={() => build(building)}>{t("Buildings.build")}</button><button onClick={() => add(building.code)}>{t("Common.add")}</button></div></div>)}</section><section className="card"><h2>{t("Buildings.built")}</h2>{built.length === 0 ? <p>{t("Buildings.noneBuilt")}</p> : built.map((building) => <div className="building" key={building.id}><div className="building-actions"><strong><ItemIcon item={building} /></strong><button onClick={() => remove(building.id)}>{t("Common.remove")}</button></div><span>{dataT(`buildingTypes.${building.building_type}`)} · {building.capacity}</span></div>)}</section></section>{buildingToConstruct && <div className="modal-backdrop"><form className="modal" onSubmit={startConstruction}><h2>{t("Buildings.construction")}</h2><p>{t("Buildings.availableWorkers", {amount: availableWorkers})}</p><ConstructionCost cost={buildingToConstruct.construction_cost} resources={resources} /><label>{t("Buildings.workers")}<input type="number" min="1" max={availableWorkers} value={constructionWorkers} onChange={(event) => setConstructionWorkers(event.target.value)} required /></label><div><button type="button" onClick={() => setBuildingToConstruct(null)}>{t("Common.cancel")}</button><button>{t("Buildings.startConstruction")}</button></div></form></div>}</main>;
 }

@@ -15,21 +15,21 @@
     },
     {
       "code": "food",
-      "name": "Їжа",
+      "name": "Food",
       "storage_coefficient": 1,
       "image_path": "/images/resources/food.png",
       "icon_frame_code": "resource_base"
     },
     {
       "code": "wood",
-      "name": "Дерево",
+      "name": "Wood",
       "storage_coefficient": 2,
       "image_path": "/images/resources/wood.png",
       "icon_frame_code": "resource_base"
     },
     {
       "code": "stone",
-      "name": "Камінь",
+      "name": "Stone",
       "storage_coefficient": 3,
       "image_path": "/images/resources/stone.png",
       "icon_frame_code": "resource_base"
@@ -74,19 +74,19 @@
   ],
   "buildings": [
     {
-      "code": "tent", "name": "Житло", "building_type": "housing", "capacity": 10,
+      "code": "tent", "name": "Tent", "building_type": "housing", "capacity": 10,
       "image_path": "/images/buildings/tent.png", "icon_frame_code": "building_base",
       "construction_cost": {"resources": {"wood": 15}, "worker_days": 10}
     },
     {
-      "code": "warehouse", "name": "Склад", "building_type": "warehouse", "capacity": 100,
+      "code": "warehouse", "name": "Warehouse", "building_type": "warehouse", "capacity": 100,
       "image_path": "/images/buildings/warehouse.png", "icon_frame_code": "building_base",
       "construction_cost": {"resources": {"wood": 10}, "worker_days": 5}
     }
   ],
 
   "nation": {
-    "name": "Октавійці",
+    "name": "Octavians",
     "population": 50,
     "influence": 0,
     "housing_capacity": 0

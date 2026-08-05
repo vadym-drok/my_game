@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {useTranslations} from "next-intl";
 import { ICON_SIZES } from "./settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 const intensityCoefficients = { BASE: 1, LIGHT: 1.5, STANDARD: 2, MEDIUM: 2.5, HEAVY: 3 };
-const statusLabels = {
-  stopped: "зупинено",
-  completed: "завершено",
-  paused: "призупинено",
-  cancelled: "зупинено",
-};
-
 function ItemIcon({ item, type = "resource" }) {
+  const t = useTranslations("Data");
   const [missing, setMissing] = useState(!item.image_path);
-  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
+  const category = type === "work_type" ? "workTypes" : "resources";
+  const name = t(`${category}.${item.code}`, {default: item.name || item.code});
+  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={name} onError={() => setMissing(true)} />}</span>;
 }
 
 export default function Home() {
+  const t = useTranslations();
+  const dataT = useTranslations("Data");
   const [nationId, setNationId] = useState("");
   const [nation, setNation] = useState(null);
   const [nations, setNations] = useState(null);
@@ -38,7 +37,7 @@ export default function Home() {
     ? nation.active_population - assignedWorkers
     : 0;
   const currentProcesses = processes.filter((process) => process.status === "active");
-  const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, resource.name]));
+  const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, dataT(`resources.${resource.code}`, {default: resource.name})]));
   const workTypesByCode = Object.fromEntries(workRules.map((workType) => [workType.code, workType]));
   const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
@@ -50,10 +49,10 @@ export default function Home() {
   const storageSufficient = storageCapacity >= storageUsed;
   const processMode = workRules.find((workType) => workType.code === selectedWorkType)?.mode || "continuous";
   const growthButtonText = nation?.hunger.active
-    ? `Голод: ${nation.hunger.days}/${nation.hunger.stage_days}`
+    ? t("Home.hunger", {days: nation.hunger.days, stageDays: nation.hunger.stage_days})
     : nation?.population_growth.available
-      ? `Зростання населення (+${populationGrowthLimit})`
-      : `До поповнення: ${nation?.population_growth.required_days - nation?.population_growth.progress_days} днів`;
+      ? t("Home.growth", {amount: populationGrowthLimit})
+      : t("Home.untilGrowth", {days: nation?.population_growth.required_days - nation?.population_growth.progress_days});
 
   useEffect(() => {
     const savedId = window.localStorage.getItem("nationId");
@@ -85,7 +84,7 @@ export default function Home() {
       setLogs(eventLogs);
       setWorkRules(rules);
       const populationLoss = reports.flatMap((report) => report.notes).find((note) => note.startsWith("Population loss: "));
-      setMessage(populationLoss ? `Голод: населення зменшилось на ${populationLoss.split(": ")[1]}.` : reports.length ? `Оновлено днів: ${reports.length}` : "");
+      setMessage(populationLoss ? t("System.populationLoss", {amount: populationLoss.split(": ")[1]}) : reports.length ? t("System.updatedDays", {days: reports.length}) : "");
     } catch (error) {
       setMessage(error.message);
     }
@@ -124,7 +123,7 @@ export default function Home() {
     const mode = processMode;
     const workers = Number(form.get("workers"));
     if (workers > availableWorkers) {
-      setWorkerError(`Доступно лише ${availableWorkers} працівників.`);
+      setWorkerError(t("Home.availableWorkers", {amount: availableWorkers}));
       return;
     }
     try {
@@ -172,7 +171,7 @@ export default function Home() {
   }
 
   function openPopulationGrowth() {
-    if (!housingSufficient || populationGrowthLimit < 1) return setMessage("Недостатньо житла для збільшення населення.");
+    if (!housingSufficient || populationGrowthLimit < 1) return setMessage(t("Home.housingRequired"));
     setGrowthModalOpen(true);
   }
 
@@ -184,7 +183,7 @@ export default function Home() {
   async function adjustResource(resource) {
     const amount = Number(resourceAmounts[resource]);
     if (!Number.isInteger(amount)) {
-      setMessage("Введіть ціле число.");
+      setMessage(t("Home.integerRequired"));
       return;
     }
     try {
@@ -202,42 +201,42 @@ export default function Home() {
   return (
     <main>
       <header>
-        <p className="eyebrow">Nation simulator</p>
-        <div className="app-title"><h1>My Game</h1>{nation && <button className="page-link" type="button" onClick={openNationSelector}>Нації</button>}</div>
+        <p className="eyebrow">{t("Common.nationSimulator")}</p>
+        <div className="app-title"><h1>{t("Home.title")}</h1>{nation && <button className="page-link" type="button" onClick={openNationSelector}>{t("Nav.nations")}</button>}</div>
       </header>
 
-      {message && <p className={`message ${message.startsWith("Голод:") ? "danger" : ""}`}>{message}</p>}
+      {message && <p className="message">{message}</p>}
 
       {!nation ? (
         <section className="card">
-          <h2>Нова нація</h2>
+          <h2>{t("Home.newNation")}</h2>
           <form onSubmit={createNation}>
-            <label>Назва<input name="name" required defaultValue="Нова нація" /></label>
-            <label>Населення<input name="population" type="number" min="0" defaultValue="10" /></label>
-            <label>General points<input name="general_points" type="number" min="0" defaultValue="30" /></label>
-            <button>Створити</button>
+            <label>{t("Home.name")}<input name="name" required defaultValue={t("Home.newNation")} /></label>
+            <label>{t("Home.population")}<input name="population" type="number" min="0" defaultValue="10" /></label>
+            <label>{t("Home.generalPoints")}<input name="general_points" type="number" min="0" defaultValue="30" /></label>
+            <button>{t("Home.create")}</button>
           </form>
-          <div className="load-form"><h2>Створені нації</h2>{nations === null ? <p>Завантаження…</p> : nations.length === 0 ? <p>Націй поки немає.</p> : <ul className="nation-list">{nations.map((item) => <li key={item.id}><span><small>#{item.id}</small> {item.name} <small>(День {item.current_day})</small></span><button className="page-link" type="button" onClick={() => loadNation(item.id)}>Відкрити</button></li>)}</ul>}</div>
+          <div className="load-form"><h2>{t("Home.createdNations")}</h2>{nations === null ? <p>{t("Common.loading")}</p> : nations.length === 0 ? <p>{t("Home.noNations")}</p> : <ul className="nation-list">{nations.map((item) => <li key={item.id}><span><small>#{item.id}</small> {item.name} <small>({t("Common.day", {day: item.current_day})})</small></span><button className="page-link" type="button" onClick={() => loadNation(item.id)}>{t("Common.open")}</button></li>)}</ul>}</div>
         </section>
       ) : (
         <>
           <section className="card nation">
-            <div><p className="eyebrow">Нація #{nation.id}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">Buildings</a></div>
-            <p className="start-date"><span>День {nation.current_day}</span>({nation.start_date})</p>
+            <div><p className="eyebrow">{t("Home.nationNumber", {id: nation.id})}</p><h2>{nation.name}</h2><button className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</button><a className="page-link buildings-link" href="/buildings">{t("Nav.buildings")}</a></div>
+            <p className="start-date"><span>{t("Common.day", {day: nation.current_day})}</span>{t("Home.startDate", {date: nation.start_date})}</p>
             <dl className="population">
-              <div><dt>Населення</dt><dd className="tooltip" data-tooltip="Кількість населення, забезпеченого житлом" tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
-              <div><dt>Активне населення</dt><dd>{nation.active_population}</dd></div>
-              <div><dt>Пасивне населення</dt><dd>{nation.passive_population}</dd></div>
+              <div><dt>{t("Home.population")}</dt><dd className="tooltip" data-tooltip={t("Home.populationHousingHint")} tabIndex="0">{nation.population} <span className={`housing-capacity ${housingSufficient ? "sufficient" : "insufficient"}`}>({housingProvided})</span></dd></div>
+              <div><dt>{t("Home.activePopulation")}</dt><dd>{nation.active_population}</dd></div>
+              <div><dt>{t("Home.passivePopulation")}</dt><dd>{nation.passive_population}</dd></div>
             </dl>
             {generalPoints && <dl className="general-points">
               <div><dt><ItemIcon item={generalPoints} /></dt><dd>{generalPoints.amount}</dd></div>
-              <div className="resource-adjust"><input aria-label={`Змінити ${generalPoints.name}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>ADD</button></div>
+              <div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button></div>
             </dl>}
             <dl className="resources">
-              <div className="resource-head"><dt>Ресурси <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip="Використано складського місця / загальна місткість складів" tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>Запас</span><span>− / добу</span><span>+ / добу</span><span>Змінити</span></div>
+              <div className="resource-head"><dt>{t("Home.resources")} <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>{t("Home.stock")}</span><span>{t("Home.perDaySpending")}</span><span>{t("Home.perDayIncome")}</span><span>{t("Home.change")}</span></div>
               {regularResources.map((resource) => (
                 <div className="resource-row" key={resource.code}>
-                  <dt><ItemIcon item={resource} /></dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`Змінити ${resource.name}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>ADD</button></div>
+                  <dt><ItemIcon item={resource} /></dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[resource.code]}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>{t("Common.add")}</button></div>
                 </div>
               ))}
             </dl>
@@ -245,40 +244,40 @@ export default function Home() {
 
           <section className="grid">
             <section className="card">
-              <h2>Новий процес</h2>
+              <h2>{t("Home.newProcess")}</h2>
               <form onSubmit={createProcess}>
-                <label>Назва<input name="name" required placeholder="Наприклад, лісоруби" /></label>
-                <label>Робота<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{type.name}</option>)}</select></label>
-                <button className="work-info-button" type="button" aria-label="Ефекти робіт" title="Ефекти робіт" onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
+                <label>{t("Home.name")}<input name="name" required placeholder={t("Home.exampleProcess")} /></label>
+                <label>{t("Home.work")}<select name="work_type" value={selectedWorkType} onChange={(event) => setSelectedWorkType(event.target.value)}>{workRules.map((type) => <option key={type.code} value={type.code}>{dataT(`workTypes.${type.code}`, {default: type.name})}</option>)}</select></label>
+                <button className="work-info-button" type="button" aria-label={t("Home.workEffects")} title={t("Home.workEffects")} onClick={() => setWorkInfoOpen(!workInfoOpen)}>ⓘ</button>
                 {workInfoOpen && <ul className="work-rules">
-                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} type="work_type" /></strong><span className="log-negative">Їжа ×{intensityCoefficients[rule.intensity]}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
+                  {workRules.map((rule) => <li key={rule.code}><strong><ItemIcon item={rule} type="work_type" /></strong><span className="log-negative">{t("Home.foodIntensity", {value: intensityCoefficients[rule.intensity]})}</span>{Object.entries(rule.outputs).map(([resource, amount]) => <span className="log-positive" key={resource}>+{amount} {resourceNames[resource] || resource}</span>)}</li>)}
                 </ul>}
-                <p>Режим: {processMode === "finite" ? "Кінцевий" : "Постійний"}</p>
-                <label className={workerError ? "invalid" : ""}>Працівники<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? `Доступно лише ${availableWorkers} працівників.` : "")} /></label>
+                <p>{t("Home.mode", {mode: t(`Modes.${processMode}`)})}</p>
+                <label className={workerError ? "invalid" : ""}>{t("Home.workers")}<input name="workers" type="number" min="0" max={availableWorkers} defaultValue="0" onChange={(event) => setWorkerError(Number(event.target.value) > availableWorkers ? t("Home.availableWorkers", {amount: availableWorkers}) : "")} /></label>
                 {workerError && <p className="field-error" role="alert">{workerError}</p>}
-                {processMode === "finite" && <label>Людино-дні для завершення<input name="required_worker_days" type="number" min="1" defaultValue="10" required /></label>}
-                <button>Запустити</button>
+                {processMode === "finite" && <label>{t("Home.workerDays")}<input name="required_worker_days" type="number" min="1" defaultValue="10" required /></label>}
+                <button>{t("Home.start")}</button>
               </form>
             </section>
 
             <div className="process-panels">
               <section className="card">
-              <div className="section-heading"><h2>Поточні процеси</h2><a className="page-link" href="/history">History</a></div>
+              <div className="section-heading"><h2>{t("Home.currentProcesses")}</h2><a className="page-link" href="/history">{t("Nav.history")}</a></div>
               <div className="workforce">
-                <div><span>Задіяно: {assignedWorkers} / {nation.active_population}</span></div>
+                <div><span>{t("Home.assigned", {assigned: assignedWorkers, total: nation.active_population})}</span></div>
                 <progress value={assignedWorkers} max={nation.active_population || 1} />
               </div>
-              {currentProcesses.length === 0 ? <p>Немає активних процесів.</p> : (
+              {currentProcesses.length === 0 ? <p>{t("Home.noActiveProcesses")}</p> : (
                 <ul className="processes">
                   {currentProcesses.map((process) => (
                     <li key={process.id}>
                       <strong>{process.name}</strong>
-                      <span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{process.mode}</span>
-                      <span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span>
+                      <span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{t(`Modes.${process.mode}`)}</span>
+                      <span>{t("History.workers", {amount: process.assigned_workers})}{process.mode === "finite" && ` · ${t("History.workerDays", {completed: process.completed_worker_days, required: process.required_worker_days})}`}</span>
                       <div>
                         <button onClick={() => updateProcess(process.id, { assigned_workers: Math.max(0, process.assigned_workers - 1) })}>−</button>
                         <button onClick={() => updateProcess(process.id, { assigned_workers: process.assigned_workers + 1 })}>+</button>
-                        <button onClick={() => updateProcess(process.id, { status: "stopped" })}>Зупинити</button>
+                        <button onClick={() => updateProcess(process.id, { status: "stopped" })}>{t("Home.stop")}</button>
                       </div>
                     </li>
                   ))}
@@ -287,20 +286,20 @@ export default function Home() {
             </section>
             </div>
             <section className="card event-log">
-              <h2>Історія подій</h2>
-              {logs.length === 0 ? <p>Подій поки немає.</p> : <ul>
-                {logs.slice(0, 10).map((log) => <li key={log.id}><span>День {log.day} · {log.message}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
+              <h2>{t("Home.eventHistory")}</h2>
+              {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
+                {logs.slice(0, 10).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
-              <a className="page-link log-history-link" href="/logs">Log history</a>
+              <a className="page-link log-history-link" href="/logs">{t("Nav.logHistory")}</a>
             </section>
           </section>
 
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
-              <h2>Зростання населення</h2>
-              <p>Доступно до +{populationGrowthLimit} осіб.</p>
-              <label>Додати населення<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
-              <div><button type="button" onClick={() => setGrowthModalOpen(false)}>Скасувати</button><button>Підтвердити</button></div>
+              <h2>{t("Home.growthTitle")}</h2>
+              <p>{t("Home.availableUpTo", {amount: populationGrowthLimit})}</p>
+              <label>{t("Home.addPopulation")}<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
+              <div><button type="button" onClick={() => setGrowthModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Common.confirm")}</button></div>
             </form>
           </div>}
         </>

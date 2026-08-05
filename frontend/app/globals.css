@@ -1,6 +1,9 @@
 :root { color: #eef2e2; background: #172017; font-family: Arial, sans-serif; }
 * { box-sizing: border-box; }
 body { margin: 0; }
+.language-switcher { position: fixed; z-index: 2; top: 16px; right: 16px; display: flex; gap: 4px; }
+.language-switcher button { padding: 6px 8px; background: #263125; color: #d8e3d2; border-color: #748a70; }
+.language-switcher button.active { background: #397bab; border-color: #6ea9d8; color: #fff; }
 main { max-width: 1050px; margin: auto; padding: 48px 20px; }
 h1 { font-size: 3rem; margin: 0; } h2 { margin-top: 0; }
 .app-title { display: flex; align-items: center; gap: 12px; }

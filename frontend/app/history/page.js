@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {useTranslations} from "next-intl";
 import { ICON_SIZES } from "../settings";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
-const statusLabels = { stopped: "зупинено", completed: "завершено", paused: "призупинено", cancelled: "зупинено" };
-
 function ItemIcon({ item, type = "resource" }) {
+  const t = useTranslations("Data");
   const [missing, setMissing] = useState(!item.image_path);
-  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={item.name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={item.name} onError={() => setMissing(true)} />}</span>;
+  const name = t(`workTypes.${item.code}`, {default: item.name || item.code});
+  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={name} onError={() => setMissing(true)} />}</span>;
 }
 
 export default function History() {
+  const t = useTranslations();
   const [processes, setProcesses] = useState(null);
   const [workRules, setWorkRules] = useState([]);
   const [nation, setNation] = useState(null);
@@ -28,10 +30,10 @@ export default function History() {
   }, []);
 
   return <main>
-    <header className="page-header"><div><p className="eyebrow">Nation simulator</p><h1>Історія процесів</h1><a className="page-link back-link" href="/">← До нації</a></div>{nation && <p className="page-day">День {nation.current_day}</p>}</header>
+    <header className="page-header"><div><p className="eyebrow">{t("Common.nationSimulator")}</p><h1>{t("History.title")}</h1><a className="page-link back-link" href="/">{t("Common.backToNation")}</a></div>{nation && <p className="page-day">{t("Common.day", {day: nation.current_day})}</p>}</header>
     <section className="card">
-      {processes === null ? <p>Завантаження…</p> : processes.length === 0 ? <p>Історія поки порожня.</p> : <ul className="processes history">
-        {processes.map((process) => <li key={process.id}><strong>{process.name}</strong><span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{process.mode} · {statusLabels[process.status] || process.status}</span><span>{process.assigned_workers} працівників{process.mode === "finite" && ` · ${process.completed_worker_days}/${process.required_worker_days} людино-днів`}</span></li>)}
+      {processes === null ? <p>{t("Common.loading")}</p> : processes.length === 0 ? <p>{t("History.empty")}</p> : <ul className="processes history">
+        {processes.map((process) => <li key={process.id}><strong>{process.name}</strong><span className="process-work"><ItemIcon item={workTypesByCode[process.work_type] || { code: process.work_type, name: process.work_type }} type="work_type" />{t(`Modes.${process.mode}`)} · {t(`Statuses.${process.status}`)}</span><span>{t("History.workers", {amount: process.assigned_workers})}{process.mode === "finite" && ` · ${t("History.workerDays", {completed: process.completed_worker_days, required: process.required_worker_days})}`}</span></li>)}
       </ul>}
     </section>
   </main>;

@@ -1,15 +1,22 @@
 import "./globals.css";
+import {NextIntlClientProvider} from "next-intl";
+import {getLocale, getTranslations} from "next-intl/server";
+import LanguageSwitcher from "./language-switcher";
 
-export const metadata = {
-  title: "My Game",
-  description: "Nation simulator",
-  icons: { icon: "/images/general/game_logo.png" },
-};
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return {
+    title: t("Home.title"),
+    description: t("Metadata.description"),
+    icons: { icon: "/images/general/game_logo.png" },
+  };
+}
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const locale = await getLocale();
   return (
-    <html lang="uk">
-      <body>{children}</body>
+    <html lang={locale}>
+      <body><NextIntlClientProvider><LanguageSwitcher />{children}</NextIntlClientProvider></body>
     </html>
   );
 }
