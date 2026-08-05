@@ -81,7 +81,7 @@ async def advance_day(
         select(NationResource, Resource)
         .join(Resource, NationResource.resource_id == Resource.id)
         .where(NationResource.nation_id == nation.id)
-        .order_by(Resource.id)
+        .order_by(Resource.order, Resource.id)
     )
     resource_rows = result.all()
     result = await session.exec(

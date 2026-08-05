@@ -22,6 +22,7 @@ class Resource(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     code: str = Field(index=True)
     name: str
+    order: int = 0
     storage_coefficient: float = 1
     image_path: str | None = None
     icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)

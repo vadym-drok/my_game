@@ -55,7 +55,7 @@ async def building_capacity(session: AsyncSession, nation_id: int, building_type
 
 @app.get("/resources")
 async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    result = await session.exec(select(Resource).order_by(Resource.id))
+    result = await session.exec(select(Resource).order_by(Resource.order, Resource.id))
     paths = await icon_frame_paths(session)
     return [with_icon_frame(item, paths) for item in result.all()]
 
@@ -225,7 +225,7 @@ async def get_nation(
         select(NationResource, Resource)
         .join(Resource, NationResource.resource_id == Resource.id)
         .where(NationResource.nation_id == nation_id)
-        .order_by(Resource.id)
+        .order_by(Resource.order, Resource.id)
     )
     resource_rows = result.all()
     frames = await icon_frame_paths(session)
