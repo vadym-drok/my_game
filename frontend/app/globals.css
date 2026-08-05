@@ -16,8 +16,8 @@ h1 { font-size: 3rem; margin: 0; } h2 { margin-top: 0; }
 .grid .card { margin: 0; }
 .process-panels { display: grid; gap: 20px; }.process-panels .card { margin: 0; }
 form { display: grid; gap: 12px; } label { display: grid; gap: 5px; color: #c9d3c0; }
-input, select, button { font: inherit; border-radius: 7px; padding: 9px; border: 1px solid #566855; }
-input, select { background: #192219; color: inherit; } button { cursor: pointer; background: #a5ca78; color: #172017; font-weight: bold; }
+input, select, textarea, button { font: inherit; border-radius: 7px; padding: 9px; border: 1px solid #566855; }
+input, select, textarea { background: #192219; color: inherit; } textarea { min-height: 130px; resize: vertical; } button { cursor: pointer; background: #a5ca78; color: #172017; font-weight: bold; }
 label.invalid input { border-color: #e99b7b; } .field-error { color: #ffb499; margin: -5px 0 0; }
 button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 1px solid #425240; padding-top: 18px; }
 .nation { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; }.nation dl { grid-column: 1 / -1; display: flex; gap: 28px; flex-wrap: wrap; margin: 0; }.nation dt { color: #aab9a4; font-size: .8rem; }.nation dd { margin: 4px 0 0; font-size: 1.25rem; }.nation .resources { display: grid; gap: 8px; border-top: 1px solid #425240; padding-top: 16px; }.resource-head, .resource-row { display: grid; grid-template-columns: 1.3fr repeat(3, 1fr); gap: 16px; align-items: center; }.resource-head { color: #aab9a4; font-size: .8rem; }.resource-head dt { color: #eef2e2; }.resource-row dt { font-size: 1rem; }.resource-row dd { margin: 0; }.resource-alert { color: #ff9b8a; }.spending { color: #ff9b8a; }.income { color: #a5ca78; }.resource-adjust { display: flex; gap: 6px; }.resource-adjust input { min-width: 0; width: 100%; }.resource-adjust button { padding: 6px 9px; }.start-date { display: grid; gap: 4px; margin: 0; color: #eef2e2; font-size: 1.25rem; text-align: right; }.start-date span { color: #aab9a4; font-size: .8rem; }
@@ -44,6 +44,7 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .processes .process-work { display: flex; align-items: center; gap: 7px; }
 .processes .process-controls { display: flex; align-items: center; gap: 8px; }.processes .process-controls.is-paused > :not(.process-state-actions) { opacity: .52; filter: grayscale(.55); }.processes .worker-buttons, .processes .process-state-actions { display: flex; gap: 6px; margin-top: 0; }.processes .process-state-actions { margin-left: auto; }.processes .pause-button { color: #ffd287; border-color: #d98a42; }.processes .resume-button { color: #a5ca78; border-color: #a5ca78; }.processes .stop-button { color: #ff9b8a; border-color: #c45a4c; }.processes .worker-days { display: grid; gap: 5px; color: #c9d3c0; font-size: .9rem; }.processes .worker-days progress { width: 100%; height: 7px; accent-color: #a5ca78; }
 .processes div { display: flex; gap: 6px; margin-top: 4px; }
+.personal-tasks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }.personal-tasks li { display: grid; gap: 6px; border-top: 1px solid #425240; padding-top: 12px; }.personal-tasks span, .personal-tasks p { color: #b9c3b3; font-size: .9rem; }.personal-tasks p { margin: 0; white-space: pre-wrap; }
 .processes button { background: transparent; border-color: #748a70; color: #d8e3d2; padding: 5px 8px; }
 .event-log ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .event-log li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #425240; padding-top: 10px; }

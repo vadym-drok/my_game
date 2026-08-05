@@ -21,3 +21,9 @@ class WorkMode(StrEnum):
 class BuildingType(StrEnum):
     HOUSING = "housing"
     WAREHOUSE = "warehouse"
+
+
+class PersonalTaskType(StrEnum):
+    ONE_TIME = "one_time"
+    PERIODIC = "periodic"
+    INFINITE = "infinite"

@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, WorkMode
-from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationBuilding, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -18,6 +18,7 @@ from app.schemas import (
     ResourcePurchase,
     ProcessCreate,
     ProcessUpdate,
+    PersonalTaskCreate,
 )
 from app.settings import (
     HUNGER_STAGE_ONE_DAYS,
@@ -461,6 +462,33 @@ async def list_processes(
         select(Process)
         .where(Process.nation_id == nation_id)
         .order_by(Process.id.desc())
+    )
+    return list(result.all())
+
+
+@app.post("/nations/{nation_id}/personal-tasks", response_model=PersonalTask)
+async def create_personal_task(
+    nation_id: int,
+    data: PersonalTaskCreate,
+    session: AsyncSession = Depends(get_session),
+) -> PersonalTask:
+    if await session.get(Nation, nation_id) is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    task = PersonalTask(nation_id=nation_id, **data.model_dump())
+    session.add(task)
+    await session.commit()
+    await session.refresh(task)
+    return task
+
+
+@app.get("/nations/{nation_id}/personal-tasks", response_model=list[PersonalTask])
+async def list_personal_tasks(
+    nation_id: int, session: AsyncSession = Depends(get_session)
+) -> list[PersonalTask]:
+    result = await session.exec(
+        select(PersonalTask)
+        .where(PersonalTask.nation_id == nation_id)
+        .order_by(PersonalTask.id.desc())
     )
     return list(result.all())
 

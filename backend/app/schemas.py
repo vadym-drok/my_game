@@ -2,7 +2,7 @@ from enum import StrEnum
 
 from sqlmodel import Field, SQLModel
 
-from app.game_rules import WorkMode
+from app.game_rules import PersonalTaskType, WorkMode
 from app.models import Process
 
 
@@ -50,3 +50,10 @@ class ResourcePurchase(SQLModel):
 
 class ConstructionStart(SQLModel):
     assigned_workers: int = Field(ge=1)
+
+
+class PersonalTaskCreate(SQLModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1)
+    reward: int = Field(ge=0)
+    task_type: PersonalTaskType
