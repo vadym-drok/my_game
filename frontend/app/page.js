@@ -29,6 +29,7 @@ export default function Home() {
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
   const [spendModalOpen, setSpendModalOpen] = useState(false);
+  const [manualAdjustmentOpen, setManualAdjustmentOpen] = useState(false);
   const [purchaseAmounts, setPurchaseAmounts] = useState({});
   const [resourceAmounts, setResourceAmounts] = useState({});
   const [selectedWorkType, setSelectedWorkType] = useState("food_gathering");
@@ -253,16 +254,17 @@ export default function Home() {
             </dl>
             {generalPoints && <dl className="general-points">
               <div><dt><ItemIcon item={generalPoints} /></dt><dd>{generalPoints.amount}</dd></div>
-              <div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button><button type="button" onClick={openSpend}>{t("Spend.button")}</button></div>
+              <div className="resource-adjust"><button type="button" onClick={openSpend}>{t("Spend.button")}</button><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button></div>
             </dl>}
             <dl className="resources">
-              <div className="resource-head"><dt>{t("Home.resources")} <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>{t("Home.stock")}</span><span>{t("Home.perDaySpending")}</span><span>{t("Home.perDayIncome")}</span><span>{t("Home.change")}</span></div>
+              <div className="resource-head"><dt>{t("Home.resources")} <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>{t("Home.stock")}</span><span>{t("Home.perDaySpending")}</span><span>{t("Home.perDayIncome")}</span></div>
               {regularResources.map((resource) => (
                 <div className="resource-row" key={resource.code}>
-                  <dt><ItemIcon item={resource} /></dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[resource.code]}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>{t("Common.add")}</button></div>
+                  <dt><ItemIcon item={resource} /></dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span>
                 </div>
               ))}
             </dl>
+            <button className="manual-adjustment-button" type="button" onClick={() => setManualAdjustmentOpen(true)}>Manual Adjustment</button>
           </section>
 
           <section className="grid">
@@ -333,6 +335,17 @@ export default function Home() {
               <div className="purchase-list">{regularResources.map((resource) => <label key={resource.code}><ItemIcon item={resource} />{t("Spend.amount", {resource: resourceNames[resource.code]})}<input type="number" min="0" step="1" value={purchaseAmounts[resource.code] ?? ""} onChange={(event) => setPurchaseAmounts({...purchaseAmounts, [resource.code]: event.target.value})} /></label>)}</div>
               <div><button type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Spend.confirm")}</button></div>
             </form>
+          </div>}
+          {manualAdjustmentOpen && <div className="modal-backdrop">
+            <section className="modal manual-adjustment-modal" role="dialog" aria-modal="true" aria-label="Manual Adjustment">
+              <h2>Manual Adjustment</h2>
+              <div className="manual-adjustment-list">
+                {regularResources.map((resource) => <div className="manual-adjustment-row" key={resource.code}>
+                  <span><ItemIcon item={resource} />{resourceNames[resource.code]}</span><strong>{resource.amount}</strong><input aria-label={`${t("Home.change")} ${resourceNames[resource.code]}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>{t("Common.add")}</button>
+                </div>)}
+              </div>
+              <div><button type="button" onClick={() => setManualAdjustmentOpen(false)}>{t("Common.close")}</button></div>
+            </section>
           </div>}
         </>
       )}
