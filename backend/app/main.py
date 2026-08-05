@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
-from app.game_rules import BuildingType, WorkMode
+from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
 from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationBuilding, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
@@ -18,6 +18,7 @@ from app.schemas import (
     ResourcePurchase,
     ProcessCreate,
     ProcessUpdate,
+    PersonalTaskAction,
     PersonalTaskCreate,
 )
 from app.settings import (
@@ -491,6 +492,46 @@ async def list_personal_tasks(
         .order_by(PersonalTask.id.desc())
     )
     return list(result.all())
+
+
+@app.patch("/personal-tasks/{task_id}", response_model=PersonalTask)
+async def update_personal_task(
+    task_id: int,
+    action: PersonalTaskAction,
+    session: AsyncSession = Depends(get_session),
+) -> PersonalTask:
+    task = await session.get(PersonalTask, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Personal task not found")
+    if task.status != PersonalTaskStatus.ACTIVE:
+        raise HTTPException(status_code=422, detail="Personal task is already closed")
+    if action == PersonalTaskAction.CANCEL:
+        task.status = PersonalTaskStatus.CANCELLED
+    else:
+        result = await session.exec(
+            select(NationResource)
+            .join(Resource, NationResource.resource_id == Resource.id)
+            .where(NationResource.nation_id == task.nation_id, Resource.code == "general_points")
+        )
+        points = result.first()
+        if points is None:
+            raise HTTPException(status_code=422, detail="General points are unavailable")
+        points.amount += task.reward
+        task.counter += 1
+        session.add(points)
+        nation = await session.get(Nation, task.nation_id)
+        session.add(NationLog(
+            nation_id=task.nation_id,
+            day=await nation_current_day(session, nation),
+            message=f"Виконано особисту задачу: {task.name}",
+            amount=task.reward,
+        ))
+        if task.task_type == "one_time":
+            task.status = PersonalTaskStatus.DONE
+    session.add(task)
+    await session.commit()
+    await session.refresh(task)
+    return task
 
 
 @app.patch("/processes/{process_id}", response_model=Process)

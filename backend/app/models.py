@@ -4,7 +4,7 @@ from sqlalchemy import JSON, Column, UniqueConstraint
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from app.game_rules import BuildingType, PersonalTaskType, WorkIntensity, WorkMode
+from app.game_rules import BuildingType, PersonalTaskStatus, PersonalTaskType, WorkIntensity, WorkMode
 
 
 class IconFrame(SQLModel, table=True):
@@ -145,10 +145,16 @@ class PersonalTask(SQLModel, table=True):
     description: str
     reward: int
     task_type: str
-    status: str = "active"
+    status: str = PersonalTaskStatus.ACTIVE
+    counter: int = Field(default=0, ge=0)
     created_at: datetime = Field(default_factory=datetime.now)
 
     @field_validator("task_type")
     @classmethod
     def validate_task_type(cls, value: str) -> str:
         return PersonalTaskType(value).value
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        return PersonalTaskStatus(value).value

@@ -9,6 +9,7 @@ main { max-width: 1050px; margin: auto; padding: 48px 20px; }
 h1 { font-size: 3rem; margin: 0; } h2 { margin-top: 0; }
 .app-title { display: flex; align-items: center; gap: 12px; }
 .page-header { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.page-header-actions { display: flex; align-items: center; gap: 12px; }
 .page-day { margin: 0; color: #aab9a4; font-size: .9rem; white-space: nowrap; }
 .eyebrow { color: #a5ca78; letter-spacing: .08em; text-transform: uppercase; font-size: .75rem; }
 .card { background: #263125; border: 1px solid #425240; border-radius: 12px; padding: 22px; margin: 24px 0; }
@@ -44,7 +45,7 @@ button:hover { background: #c0e48e; }.load-form { margin-top: 28px; border-top: 
 .processes .process-work { display: flex; align-items: center; gap: 7px; }
 .processes .process-controls { display: flex; align-items: center; gap: 8px; }.processes .process-controls.is-paused > :not(.process-state-actions) { opacity: .52; filter: grayscale(.55); }.processes .worker-buttons, .processes .process-state-actions { display: flex; gap: 6px; margin-top: 0; }.processes .process-state-actions { margin-left: auto; }.processes .pause-button { color: #ffd287; border-color: #d98a42; }.processes .resume-button { color: #a5ca78; border-color: #a5ca78; }.processes .stop-button { color: #ff9b8a; border-color: #c45a4c; }.processes .worker-days { display: grid; gap: 5px; color: #c9d3c0; font-size: .9rem; }.processes .worker-days progress { width: 100%; height: 7px; accent-color: #a5ca78; }
 .processes div { display: flex; gap: 6px; margin-top: 4px; }
-.personal-tasks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }.personal-tasks li { display: grid; gap: 6px; border-top: 1px solid #425240; padding-top: 12px; }.personal-tasks span, .personal-tasks p { color: #b9c3b3; font-size: .9rem; }.personal-tasks p { margin: 0; white-space: pre-wrap; }
+.personal-tasks { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }.personal-tasks li { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; border-top: 1px solid #425240; padding-top: 12px; }.personal-tasks li.was-completed { padding: 12px; border: 1px solid #a5ca78; border-radius: 7px; background: #2d492a; }.task-info { display: grid; gap: 6px; }.personal-tasks span, .personal-tasks p { color: #b9c3b3; font-size: .9rem; }.personal-tasks p { margin: 0; white-space: pre-wrap; }.task-actions { display: flex; gap: 8px; }.task-actions button:last-child { background: transparent; border-color: #c45a4c; color: #ff9b8a; }
 .processes button { background: transparent; border-color: #748a70; color: #d8e3d2; padding: 5px 8px; }
 .event-log ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .event-log li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #425240; padding-top: 10px; }

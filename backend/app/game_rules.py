@@ -27,3 +27,9 @@ class PersonalTaskType(StrEnum):
     ONE_TIME = "one_time"
     PERIODIC = "periodic"
     INFINITE = "infinite"
+
+
+class PersonalTaskStatus(StrEnum):
+    ACTIVE = "active"
+    DONE = "done"
+    CANCELLED = "cancelled"

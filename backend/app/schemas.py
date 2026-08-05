@@ -57,3 +57,8 @@ class PersonalTaskCreate(SQLModel):
     description: str = Field(min_length=1)
     reward: int = Field(ge=0)
     task_type: PersonalTaskType
+
+
+class PersonalTaskAction(StrEnum):
+    CANCEL = "cancel"
+    DONE = "done"
