@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import Toast from "../../components/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
@@ -28,5 +29,5 @@ export default function NationsPage() {
       openNation(nation.id);
     } catch (error) { setMessage(error.message); }
   }
-  return <main><header><p className="eyebrow">{t("Common.nationSimulator")}</p><div className="app-title"><h1>{t("Home.title")}</h1></div></header>{message && <p className="message">{message}</p>}<section className="card"><h2>{t("Home.newNation")}</h2><form onSubmit={createNation}><label>{t("Home.name")}<input name="name" required defaultValue={t("Home.newNation")} /></label><label>{t("Home.population")}<input name="population" type="number" min="0" defaultValue="10" /></label><label>{t("Home.generalPoints")}<input name="general_points" type="number" min="0" defaultValue="30" /></label><button className="button-primary">{t("Home.create")}</button></form><div className="load-form"><h2>{t("Home.createdNations")}</h2>{nations === null ? <p>{t("Common.loading")}</p> : nations.length === 0 ? <p>{t("Home.noNations")}</p> : <ul className="nation-list">{nations.map((nation) => <li key={nation.id}><span><small>#{nation.id}</small> {nation.name} <small>({t("Common.day", { day: nation.current_day })})</small></span><button className="button-secondary" type="button" onClick={() => openNation(nation.id)}>{t("Common.open")}</button></li>)}</ul>}</div></section></main>;
+  return <main><Toast message={message} setMessage={setMessage} /><header><p className="eyebrow">{t("Common.nationSimulator")}</p><div className="app-title"><h1>{t("Home.title")}</h1></div></header><section className="card"><h2>{t("Home.newNation")}</h2><form onSubmit={createNation}><label>{t("Home.name")}<input name="name" required defaultValue={t("Home.newNation")} /></label><label>{t("Home.population")}<input name="population" type="number" min="0" defaultValue="10" /></label><label>{t("Home.generalPoints")}<input name="general_points" type="number" min="0" defaultValue="30" /></label><button className="button-primary">{t("Home.create")}</button></form><div className="load-form"><h2>{t("Home.createdNations")}</h2>{nations === null ? <p>{t("Common.loading")}</p> : nations.length === 0 ? <p>{t("Home.noNations")}</p> : <ul className="nation-list">{nations.map((nation) => <li key={nation.id}><span><small>#{nation.id}</small> {nation.name} <small>({t("Common.day", { day: nation.current_day })})</small></span><button className="button-secondary" type="button" onClick={() => openNation(nation.id)}>{t("Common.open")}</button></li>)}</ul>}</div></section></main>;
 }

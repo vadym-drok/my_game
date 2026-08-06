@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
 import { useRouter } from "next/navigation";
-import { ArrowRightLeft, Coins, History, Plus, Users, Warehouse } from "lucide-react";
+import { ArrowRightLeft, Coins, History, Plus, Users, Warehouse, X } from "lucide-react";
 import ItemIcon from "../components/nation/ItemIcon";
 import NationHeader from "../components/nation/NationHeader";
 import PopulationSummary from "../components/nation/PopulationSummary";
+import Toast from "../components/Toast";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 export default function Home() {
@@ -26,7 +27,6 @@ export default function Home() {
   const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, dataT(`resources.${resource.code}`, {default: resource.name})]));
   const generalPoints = nation?.resources?.find((resource) => resource.code === "general_points");
   const regularResources = (nation?.resources || []).filter((resource) => resource.code !== "general_points");
-  const purchaseTotal = regularResources.reduce((total, resource) => total + (Number(purchaseAmounts[resource.code]) || 0), 0);
   const housingProvided = nation?.housing_capacity ?? 0;
   const housingSufficient = housingProvided >= (nation?.population ?? 0);
   const populationGrowthLimit = Math.min(nation?.population_growth.max_increase ?? 0, Math.max(0, housingProvided - (nation?.population ?? 0)));
@@ -120,16 +120,18 @@ export default function Home() {
     setSelectedResource(resource);
   }
 
-  async function purchaseResources(event) {
-    event.preventDefault();
-    if (!purchaseTotal) return setMessage(t("Spend.nothing"));
+  async function purchaseResource(resource) {
+    const amount = Number(purchaseAmounts[resource.code]);
+    if (!Number.isInteger(amount) || amount < 1) return setMessage(t("Spend.nothing"));
     try {
       await request(`/nations/${nationId}/resource-purchases`, {
         method: "POST",
-        body: JSON.stringify({resources: purchaseAmounts}),
+        body: JSON.stringify({ resources: { [resource.code]: amount } }),
       });
       setSpendModalOpen(false);
+      setPurchaseAmounts({ ...purchaseAmounts, [resource.code]: "" });
       await loadNation();
+      setMessage(t("Spend.purchased", { amount, resource: resourceNames[resource.code] }));
     } catch (error) {
       setMessage(error.message);
     }
@@ -137,12 +139,11 @@ export default function Home() {
 
   return (
     <main>
+      <Toast message={message} setMessage={setMessage} />
       <header>
         <p className="eyebrow">{t("Common.nationSimulator")}</p>
         <div className="app-title"><h1>{t("Home.title")}</h1></div>
       </header>
-
-      {message && <p className="message">{message}</p>}
 
       {!nation ? <p>{t("Common.loading")}</p> : (
         <>
@@ -179,28 +180,27 @@ export default function Home() {
 
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
+              <button className="button-secondary button-icon modal-close" type="button" aria-label={t("Common.close")} onClick={() => setGrowthModalOpen(false)}><X aria-hidden="true" /></button>
               <h2>{t("Home.growthTitle")}</h2>
               <p>{t("Home.availableUpTo", {amount: populationGrowthLimit})}</p>
-              <label>{t("Home.addPopulation")}<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
-              <div><button className="button-secondary" type="button" onClick={() => setGrowthModalOpen(false)}>{t("Common.cancel")}</button><button className="button-primary">{t("Common.confirm")}</button></div>
+              <label>{t("Home.addPopulation")}<span className="adjustment-controls"><input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /><button className="button-primary">{t("Common.apply")}</button></span></label>
             </form>
           </div>}
           {spendModalOpen && <div className="modal-backdrop">
-            <form className="modal" onSubmit={purchaseResources}>
+            <section className="modal spend-modal" role="dialog" aria-modal="true" aria-label={t("Spend.title")}>
+              <button className="button-secondary button-icon modal-close" type="button" aria-label={t("Common.close")} onClick={() => setSpendModalOpen(false)}><X aria-hidden="true" /></button>
               <h2>{t("Spend.title")}</h2>
               <p>{t("Spend.available", {amount: generalPoints.amount})}</p>
-              <p>{t("Spend.total", {amount: purchaseTotal})}</p>
-              <div className="purchase-list">{regularResources.map((resource) => <label key={resource.code}><ItemIcon item={resource} />{t("Spend.amount", {resource: resourceNames[resource.code]})}<input type="number" min="0" step="1" value={purchaseAmounts[resource.code] ?? ""} onChange={(event) => setPurchaseAmounts({...purchaseAmounts, [resource.code]: event.target.value})} /></label>)}</div>
-              <div><button className="button-secondary" type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button className="button-primary">{t("Spend.confirm")}</button></div>
-            </form>
+              <div className="purchase-list">{regularResources.map((resource) => <div className="purchase-row" key={resource.code}><span className="purchase-resource"><ItemIcon item={resource} /><strong>{resource.amount}</strong></span><input aria-label={`${t("Spend.confirm")} ${resourceNames[resource.code]}`} type="number" min="0" step="1" value={purchaseAmounts[resource.code] ?? ""} onChange={(event) => setPurchaseAmounts({...purchaseAmounts, [resource.code]: event.target.value})} /><button className="button-primary" type="button" onClick={() => purchaseResource(resource)}>{t("Spend.confirm")}</button></div>)}</div>
+            </section>
           </div>}
           {selectedResource && <div className="modal-backdrop">
             <section className="modal manual-adjustment-modal" role="dialog" aria-modal="true" aria-label={t("Home.manualAdjustment")}>
+              <button className="button-secondary button-icon modal-close" type="button" aria-label={t("Common.close")} onClick={() => setSelectedResource(null)}><X aria-hidden="true" /></button>
               <h2>{t("Home.manualAdjustment")}</h2>
               <p className="adjustment-resource"><ItemIcon item={selectedResource} />{resourceNames[selectedResource.code]}</p>
               <p>{t("Home.currentAmount", { amount: selectedResource.amount })}</p>
-              <label>{t("Home.adjustmentAmount")}<input aria-label={`${t("Home.change")} ${resourceNames[selectedResource.code]}`} type="number" step="1" value={resourceAmounts[selectedResource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [selectedResource.code]: event.target.value })} /></label>
-              <div><button className="button-secondary" type="button" onClick={() => setSelectedResource(null)}>{t("Common.close")}</button><button className="button-primary" type="button" onClick={() => adjustResource(selectedResource.code)}>{t("Home.applyAdjustment")}</button></div>
+              <label>{t("Home.change")}<span className="adjustment-controls"><input aria-label={`${t("Home.change")} ${resourceNames[selectedResource.code]}`} type="number" step="1" value={resourceAmounts[selectedResource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [selectedResource.code]: event.target.value })} /><button className="button-primary" type="button" onClick={() => adjustResource(selectedResource.code)}>{t("Home.applyAdjustment")}</button></span></label>
             </section>
           </div>}
         </>
