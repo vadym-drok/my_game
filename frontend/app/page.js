@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
 import { useRouter } from "next/navigation";
+import { ArrowRightLeft, Coins, History, Plus, Users, Warehouse } from "lucide-react";
 import ItemIcon from "../components/nation/ItemIcon";
 import NationHeader from "../components/nation/NationHeader";
 import PopulationSummary from "../components/nation/PopulationSummary";
@@ -19,7 +20,7 @@ export default function Home() {
   const [growthModalOpen, setGrowthModalOpen] = useState(false);
   const [growthAmount, setGrowthAmount] = useState(0);
   const [spendModalOpen, setSpendModalOpen] = useState(false);
-  const [manualAdjustmentOpen, setManualAdjustmentOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState(null);
   const [purchaseAmounts, setPurchaseAmounts] = useState({});
   const [resourceAmounts, setResourceAmounts] = useState({});
   const resourceNames = Object.fromEntries((nation?.resources || []).map((resource) => [resource.code, dataT(`resources.${resource.code}`, {default: resource.name})]));
@@ -103,6 +104,7 @@ export default function Home() {
       });
       setResourceAmounts({ ...resourceAmounts, [resource]: "" });
       await loadNation();
+      setSelectedResource(null);
     } catch (error) {
       setMessage(error.message);
     }
@@ -111,6 +113,11 @@ export default function Home() {
   function openSpend() {
     setPurchaseAmounts({});
     setSpendModalOpen(true);
+  }
+
+  function openResourceAdjustment(resource) {
+    setResourceAmounts({ ...resourceAmounts, [resource.code]: "" });
+    setSelectedResource(resource);
   }
 
   async function purchaseResources(event) {
@@ -141,24 +148,30 @@ export default function Home() {
         <>
           <section className="card nation">
             <NationHeader nation={nation} growthButtonText={growthButtonText} onGrowth={openPopulationGrowth} />
-            <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} />
-            {generalPoints && <dl className="general-points">
-              <div><dt><ItemIcon item={generalPoints} /></dt><dd>{generalPoints.amount}</dd></div>
-              <div className="resource-adjust"><button type="button" onClick={openSpend}>{t("Spend.button")}</button><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(generalPoints.code)}>{t("Common.add")}</button></div>
-            </dl>}
-            <dl className="resources">
-              <div className="resource-head"><dt>{t("Home.resources")} <span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></dt><span>{t("Home.stock")}</span><span>{t("Home.perDaySpending")}</span><span>{t("Home.perDayIncome")}</span></div>
-              {regularResources.map((resource) => (
-                <div className="resource-row" key={resource.code}>
-                  <dt><ItemIcon item={resource} /></dt><dd className={resource.code === "food" && nation.consecutive_hunger_days ? "resource-alert" : ""}>{resource.amount}</dd><span className="spending">−{resource.spending}</span><span className="income">+{resource.income}</span>
-                </div>
-              ))}
-            </dl>
-            <button className="manual-adjustment-button" type="button" onClick={() => setManualAdjustmentOpen(true)}>Manual Adjustment</button>
+            <section className="overview-section population-section">
+              <div className="section-title"><Users aria-hidden="true" /><h2>{t("Home.population")}</h2></div>
+              <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} />
+            </section>
+            {generalPoints && <section className="overview-section general-points">
+              <div className="section-title"><Coins aria-hidden="true" /><h2>{t("Home.generalPoints")}</h2></div>
+              <div className="general-points-content"><div className="general-points-value"><ItemIcon item={generalPoints} /><strong>{generalPoints.amount}</strong></div><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button className="button-primary" type="button" onClick={() => adjustResource(generalPoints.code)}><Plus aria-hidden="true" />{t("Home.addPoints")}</button><button className="button-secondary" type="button" onClick={openSpend}><ArrowRightLeft aria-hidden="true" />{t("Spend.button")}</button></div></div>
+            </section>}
+            <section className="overview-section resources-section">
+              <div className="section-title"><Warehouse aria-hidden="true" /><h2>{t("Home.resources")}</h2><span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></div>
+              <div className="resources-grid">
+                {regularResources.map((resource) => {
+                  const dailyBalance = resource.income - resource.spending;
+                  return <button className="resource-card" type="button" key={resource.code} onClick={() => openResourceAdjustment(resource)} aria-label={t("Home.adjustResource", { resource: resourceNames[resource.code] })}>
+                    <span className="resource-card-name"><ItemIcon item={resource} />{resourceNames[resource.code]}</span>
+                    <span className="resource-card-stats"><strong className={resource.code === "food" && resource.amount === 0 ? "resource-danger" : ""}>{resource.amount}</strong><span className={dailyBalance < 0 ? "resource-warning" : dailyBalance > 0 ? "resource-success" : "resource-secondary"}>{t("Home.dailyChange", { amount: dailyBalance > 0 ? `+${dailyBalance}` : dailyBalance })}</span></span>
+                  </button>;
+                })}
+              </div>
+            </section>
           </section>
 
           <section className="card event-log overview-event-log">
-              <div className="section-heading"><h2>{t("Home.eventHistory")}</h2><a className="page-link" href="/logs">{t("Nav.logHistory")}</a></div>
+              <div className="section-heading"><div className="section-title"><History aria-hidden="true" /><h2>{t("Home.eventHistory")}</h2></div><a className="page-link button-ghost" href="/logs">{t("Nav.logHistory")}</a></div>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
                 {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
@@ -181,15 +194,13 @@ export default function Home() {
               <div><button type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Spend.confirm")}</button></div>
             </form>
           </div>}
-          {manualAdjustmentOpen && <div className="modal-backdrop">
-            <section className="modal manual-adjustment-modal" role="dialog" aria-modal="true" aria-label="Manual Adjustment">
-              <h2>Manual Adjustment</h2>
-              <div className="manual-adjustment-list">
-                {regularResources.map((resource) => <div className="manual-adjustment-row" key={resource.code}>
-                  <span><ItemIcon item={resource} />{resourceNames[resource.code]}</span><strong>{resource.amount}</strong><input aria-label={`${t("Home.change")} ${resourceNames[resource.code]}`} type="number" step="1" value={resourceAmounts[resource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [resource.code]: event.target.value })} /><button type="button" onClick={() => adjustResource(resource.code)}>{t("Common.add")}</button>
-                </div>)}
-              </div>
-              <div><button type="button" onClick={() => setManualAdjustmentOpen(false)}>{t("Common.close")}</button></div>
+          {selectedResource && <div className="modal-backdrop">
+            <section className="modal manual-adjustment-modal" role="dialog" aria-modal="true" aria-label={t("Home.manualAdjustment")}>
+              <h2>{t("Home.manualAdjustment")}</h2>
+              <p className="adjustment-resource"><ItemIcon item={selectedResource} />{resourceNames[selectedResource.code]}</p>
+              <p>{t("Home.currentAmount", { amount: selectedResource.amount })}</p>
+              <label>{t("Home.adjustmentAmount")}<input aria-label={`${t("Home.change")} ${resourceNames[selectedResource.code]}`} type="number" step="1" value={resourceAmounts[selectedResource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [selectedResource.code]: event.target.value })} /></label>
+              <div><button type="button" onClick={() => setSelectedResource(null)}>{t("Common.close")}</button><button className="button-primary" type="button" onClick={() => adjustResource(selectedResource.code)}>{t("Home.applyAdjustment")}</button></div>
             </section>
           </div>}
         </>
