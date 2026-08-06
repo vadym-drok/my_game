@@ -79,6 +79,18 @@ class LocationNeighbor(SQLModel, table=True):
     neighbor_location_code: str = Field(foreign_key="location.code", primary_key=True)
 
 
+class GameObject(SQLModel, table=True):
+    code: str = Field(primary_key=True)
+    name: str
+    image_path: str | None = None
+    description: str = ""
+    worker_days: int = Field(default=0, ge=0)
+    construction_resources: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    additional_data: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    max_workers: int = Field(default=0, ge=0)
+    outputs: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+
+
 class Nation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
@@ -135,6 +147,13 @@ class NationBuilding(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
     building_definition_id: int = Field(foreign_key="buildingdefinition.id", index=True)
+    built_at: date = Field(default_factory=date.today)
+
+
+class NationObject(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    nation_id: int = Field(foreign_key="nation.id", index=True)
+    game_object_code: str = Field(foreign_key="gameobject.code", index=True)
     built_at: date = Field(default_factory=date.today)
 
 

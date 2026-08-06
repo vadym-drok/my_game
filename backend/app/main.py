@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, IconFrame, Location, Nation, NationBuilding, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameObject, IconFrame, Location, Nation, NationBuilding, NationLog, NationObject, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -80,6 +80,23 @@ async def list_building_definitions(session: AsyncSession = Depends(get_session)
 async def list_locations(session: AsyncSession = Depends(get_session)) -> list[Location]:
     result = await session.exec(select(Location).order_by(Location.code))
     return list(result.all())
+
+
+@app.get("/objects", response_model=list[GameObject])
+async def list_game_objects(session: AsyncSession = Depends(get_session)) -> list[GameObject]:
+    result = await session.exec(select(GameObject).order_by(GameObject.code))
+    return list(result.all())
+
+
+@app.get("/nations/{nation_id}/objects")
+async def list_nation_objects(nation_id: int, session: AsyncSession = Depends(get_session)) -> list[dict]:
+    result = await session.exec(
+        select(NationObject, GameObject)
+        .join(GameObject, NationObject.game_object_code == GameObject.code)
+        .where(NationObject.nation_id == nation_id)
+        .order_by(NationObject.id.desc())
+    )
+    return [{**game_object.model_dump(), "id": nation_object.id, "built_at": nation_object.built_at} for nation_object, game_object in result.all()]
 
 
 @app.get("/nations/{nation_id}/buildings")
