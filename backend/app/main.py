@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, IconFrame, Nation, NationBuilding, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, IconFrame, Location, Nation, NationBuilding, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -74,6 +74,12 @@ async def list_building_definitions(session: AsyncSession = Depends(get_session)
     result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.id))
     paths = await icon_frame_paths(session)
     return [with_icon_frame(item, paths) for item in result.all()]
+
+
+@app.get("/locations", response_model=list[Location])
+async def list_locations(session: AsyncSession = Depends(get_session)) -> list[Location]:
+    result = await session.exec(select(Location).order_by(Location.code))
+    return list(result.all())
 
 
 @app.get("/nations/{nation_id}/buildings")

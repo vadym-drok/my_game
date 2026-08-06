@@ -64,6 +64,21 @@ class BuildingDefinition(SQLModel, table=True):
         return BuildingType(value).value
 
 
+class Location(SQLModel, table=True):
+    code: str = Field(primary_key=True)
+    name: str
+    image_path: str | None = None
+    description: str = ""
+    is_discovered: bool = False
+    worker_days: int = Field(default=0, ge=0)
+    requirements: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+
+
+class LocationNeighbor(SQLModel, table=True):
+    location_code: str = Field(foreign_key="location.code", primary_key=True)
+    neighbor_location_code: str = Field(foreign_key="location.code", primary_key=True)
+
+
 class Nation(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
