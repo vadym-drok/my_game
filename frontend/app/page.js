@@ -154,14 +154,14 @@ export default function Home() {
             </section>
             {generalPoints && <section className="overview-section general-points">
               <div className="section-title"><Coins aria-hidden="true" /><h2>{t("Home.generalPoints")}</h2></div>
-              <div className="general-points-content"><div className="general-points-value"><ItemIcon item={generalPoints} /><strong>{generalPoints.amount}</strong></div><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button className="button-primary" type="button" onClick={() => adjustResource(generalPoints.code)}><Plus aria-hidden="true" />{t("Home.addPoints")}</button><button className="button-secondary" type="button" onClick={openSpend}><ArrowRightLeft aria-hidden="true" />{t("Spend.button")}</button></div></div>
+              <div className="general-points-content"><div className="general-points-value"><ItemIcon item={generalPoints} /><strong>{generalPoints.amount}</strong></div><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button className="button-primary" type="button" onClick={() => adjustResource(generalPoints.code)}><Plus aria-hidden="true" />{t("Home.addPoints")}</button><button className="button-primary" type="button" onClick={openSpend}><ArrowRightLeft aria-hidden="true" />{t("Spend.button")}</button></div></div>
             </section>}
             <section className="overview-section resources-section">
               <div className="section-title"><Warehouse aria-hidden="true" /><h2>{t("Home.resources")}</h2><span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></div>
               <div className="resources-grid">
                 {regularResources.map((resource) => {
                   const dailyBalance = resource.income - resource.spending;
-                  return <button className="resource-card" type="button" key={resource.code} onClick={() => openResourceAdjustment(resource)} aria-label={t("Home.adjustResource", { resource: resourceNames[resource.code] })}>
+                  return <button className="button-secondary resource-card" type="button" key={resource.code} onClick={() => openResourceAdjustment(resource)} aria-label={t("Home.adjustResource", { resource: resourceNames[resource.code] })}>
                     <span className="resource-card-name"><ItemIcon item={resource} />{resourceNames[resource.code]}</span>
                     <span className="resource-card-stats"><strong className={resource.code === "food" && resource.amount === 0 ? "resource-danger" : ""}>{resource.amount}</strong><span className={dailyBalance < 0 ? "resource-warning" : dailyBalance > 0 ? "resource-success" : "resource-secondary"}>{t("Home.dailyChange", { amount: dailyBalance > 0 ? `+${dailyBalance}` : dailyBalance })}</span></span>
                   </button>;
@@ -171,7 +171,7 @@ export default function Home() {
           </section>
 
           <section className="card event-log overview-event-log">
-              <div className="section-heading"><div className="section-title"><History aria-hidden="true" /><h2>{t("Home.eventHistory")}</h2></div><a className="page-link button-ghost" href="/logs">{t("Nav.logHistory")}</a></div>
+              <div className="section-heading"><div className="section-title"><History aria-hidden="true" /><h2>{t("Home.eventHistory")}</h2></div><a className="button-secondary" href="/logs">{t("Nav.logHistory")}</a></div>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
                 {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
@@ -182,7 +182,7 @@ export default function Home() {
               <h2>{t("Home.growthTitle")}</h2>
               <p>{t("Home.availableUpTo", {amount: populationGrowthLimit})}</p>
               <label>{t("Home.addPopulation")}<input type="number" min="0" max={populationGrowthLimit} value={growthAmount} onChange={(event) => setGrowthAmount(event.target.value)} /></label>
-              <div><button type="button" onClick={() => setGrowthModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Common.confirm")}</button></div>
+              <div><button className="button-secondary" type="button" onClick={() => setGrowthModalOpen(false)}>{t("Common.cancel")}</button><button className="button-primary">{t("Common.confirm")}</button></div>
             </form>
           </div>}
           {spendModalOpen && <div className="modal-backdrop">
@@ -191,7 +191,7 @@ export default function Home() {
               <p>{t("Spend.available", {amount: generalPoints.amount})}</p>
               <p>{t("Spend.total", {amount: purchaseTotal})}</p>
               <div className="purchase-list">{regularResources.map((resource) => <label key={resource.code}><ItemIcon item={resource} />{t("Spend.amount", {resource: resourceNames[resource.code]})}<input type="number" min="0" step="1" value={purchaseAmounts[resource.code] ?? ""} onChange={(event) => setPurchaseAmounts({...purchaseAmounts, [resource.code]: event.target.value})} /></label>)}</div>
-              <div><button type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button>{t("Spend.confirm")}</button></div>
+              <div><button className="button-secondary" type="button" onClick={() => setSpendModalOpen(false)}>{t("Common.cancel")}</button><button className="button-primary">{t("Spend.confirm")}</button></div>
             </form>
           </div>}
           {selectedResource && <div className="modal-backdrop">
@@ -200,7 +200,7 @@ export default function Home() {
               <p className="adjustment-resource"><ItemIcon item={selectedResource} />{resourceNames[selectedResource.code]}</p>
               <p>{t("Home.currentAmount", { amount: selectedResource.amount })}</p>
               <label>{t("Home.adjustmentAmount")}<input aria-label={`${t("Home.change")} ${resourceNames[selectedResource.code]}`} type="number" step="1" value={resourceAmounts[selectedResource.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [selectedResource.code]: event.target.value })} /></label>
-              <div><button type="button" onClick={() => setSelectedResource(null)}>{t("Common.close")}</button><button className="button-primary" type="button" onClick={() => adjustResource(selectedResource.code)}>{t("Home.applyAdjustment")}</button></div>
+              <div><button className="button-secondary" type="button" onClick={() => setSelectedResource(null)}>{t("Common.close")}</button><button className="button-primary" type="button" onClick={() => adjustResource(selectedResource.code)}>{t("Home.applyAdjustment")}</button></div>
             </section>
           </div>}
         </>

@@ -12,6 +12,6 @@ export default function LanguageSwitcher() {
   }
 
   return <nav className="language-switcher" aria-label={t("label")}>
-    {[["en", "EN"], ["uk", "UA"]].map(([code, label]) => <button className={locale === code ? "active" : ""} key={code} type="button" onClick={() => changeLocale(code)}>{label}</button>)}
+    {[["en", "EN"], ["uk", "UA"]].map(([code, label]) => <button className={`button-secondary ${locale === code ? "active" : ""}`} key={code} type="button" onClick={() => changeLocale(code)}>{label}</button>)}
   </nav>;
 }
