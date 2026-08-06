@@ -79,7 +79,7 @@ class LocationNeighbor(SQLModel, table=True):
     neighbor_location_code: str = Field(foreign_key="location.code", primary_key=True)
 
 
-class GameObject(SQLModel, table=True):
+class GameItem(SQLModel, table=True):
     code: str = Field(primary_key=True)
     name: str
     image_path: str | None = None
@@ -150,10 +150,10 @@ class NationBuilding(SQLModel, table=True):
     built_at: date = Field(default_factory=date.today)
 
 
-class NationObject(SQLModel, table=True):
+class NationItem(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
-    game_object_code: str = Field(foreign_key="gameobject.code", index=True)
+    game_item_code: str = Field(foreign_key="gameitem.code", index=True)
     built_at: date = Field(default_factory=date.today)
 
 
