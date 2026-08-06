@@ -62,3 +62,5 @@ class PersonalTaskCreate(SQLModel):
 class PersonalTaskAction(StrEnum):
     CANCEL = "cancel"
     DONE = "done"
+    RESTART = "restart"
+    CONTINUE = "continue"

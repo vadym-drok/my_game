@@ -503,6 +503,23 @@ async def update_personal_task(
     task = await session.get(PersonalTask, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Personal task not found")
+    if action in {PersonalTaskAction.RESTART, PersonalTaskAction.CONTINUE}:
+        if task.status != PersonalTaskStatus.CANCELLED or task.task_type == "one_time":
+            raise HTTPException(status_code=422, detail="Only cancelled recurring tasks can be restarted")
+        if action == PersonalTaskAction.RESTART:
+            task = PersonalTask(
+                nation_id=task.nation_id,
+                name=task.name,
+                description=task.description,
+                reward=task.reward,
+                task_type=task.task_type,
+            )
+        else:
+            task.status = PersonalTaskStatus.ACTIVE
+        session.add(task)
+        await session.commit()
+        await session.refresh(task)
+        return task
     if task.status != PersonalTaskStatus.ACTIVE:
         raise HTTPException(status_code=422, detail="Personal task is already closed")
     if action == PersonalTaskAction.CANCEL:
