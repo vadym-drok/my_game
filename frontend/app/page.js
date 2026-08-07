@@ -8,6 +8,9 @@ import ItemIcon from "../components/nation/ItemIcon";
 import NationHeader from "../components/nation/NationHeader";
 import PopulationSummary from "../components/nation/PopulationSummary";
 import Toast from "../components/Toast";
+import GameButton from "../components/ui/GameButton";
+import GamePanel from "../components/ui/GamePanel";
+import SectionHeader from "../components/ui/SectionHeader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 export default function Home() {
@@ -147,18 +150,18 @@ export default function Home() {
 
       {!nation ? <p>{t("Common.loading")}</p> : (
         <>
-          <section className="card nation">
+          <GamePanel className="nation">
             <NationHeader nation={nation} growthButtonText={growthButtonText} onGrowth={openPopulationGrowth} />
             <section className="overview-section population-section">
-              <div className="section-title"><Users aria-hidden="true" /><h2>{t("Home.population")}</h2></div>
+              <SectionHeader icon={Users} title={t("Home.population")} />
               <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} />
             </section>
             {generalPoints && <section className="overview-section general-points">
-              <div className="section-title"><Coins aria-hidden="true" /><h2>{t("Home.generalPoints")}</h2></div>
-              <div className="general-points-content"><div className="general-points-value"><ItemIcon item={generalPoints} /><strong>{generalPoints.amount}</strong></div><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><button className="button-primary" type="button" onClick={() => adjustResource(generalPoints.code)}><Plus aria-hidden="true" />{t("Home.addPoints")}</button><button className="button-primary" type="button" onClick={openSpend}><ArrowRightLeft aria-hidden="true" />{t("Spend.button")}</button></div></div>
+              <SectionHeader icon={Coins} title={t("Home.generalPoints")} />
+              <div className="general-points-content"><div className="general-points-value"><ItemIcon item={generalPoints} /><strong>{generalPoints.amount}</strong></div><div className="resource-adjust"><input aria-label={`${t("Home.change")} ${resourceNames[generalPoints.code]}`} type="number" step="1" value={resourceAmounts[generalPoints.code] ?? ""} onChange={(event) => setResourceAmounts({ ...resourceAmounts, [generalPoints.code]: event.target.value })} /><GameButton type="button" onClick={() => adjustResource(generalPoints.code)}><Plus aria-hidden="true" />{t("Home.addPoints")}</GameButton><GameButton type="button" onClick={openSpend}><ArrowRightLeft aria-hidden="true" />{t("Spend.button")}</GameButton></div></div>
             </section>}
             <section className="overview-section resources-section">
-              <div className="section-title"><Warehouse aria-hidden="true" /><h2>{t("Home.resources")}</h2><span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></div>
+              <SectionHeader icon={Warehouse} title={t("Home.resources")}><span className={`storage-capacity tooltip ${storageSufficient ? "sufficient" : "insufficient"}`} data-tooltip={t("Home.storageHint")} tabIndex="0">({storageUsed} / {storageCapacity})</span></SectionHeader>
               <div className="resources-grid">
                 {regularResources.map((resource) => {
                   const dailyBalance = resource.income - resource.spending;
@@ -169,14 +172,14 @@ export default function Home() {
                 })}
               </div>
             </section>
-          </section>
+          </GamePanel>
 
-          <section className="card event-log overview-event-log">
-              <div className="section-heading"><div className="section-title"><History aria-hidden="true" /><h2>{t("Home.eventHistory")}</h2></div><a className="button-secondary" href="/logs">{t("Nav.logHistory")}</a></div>
+          <GamePanel className="event-log overview-event-log">
+              <SectionHeader icon={History} title={t("Home.eventHistory")}><a className="button-secondary" href="/logs">{t("Nav.logHistory")}</a></SectionHeader>
               {logs.length === 0 ? <p>{t("Home.noEvents")}</p> : <ul>
                 {logs.slice(0, 5).map((log) => <li key={log.id}><span>{t("Logs.entry", {day: log.day, message: log.message})}</span><strong className={log.amount < 0 ? "log-negative" : "log-positive"}>{log.amount > 0 ? "+" : ""}{log.amount}</strong></li>)}
               </ul>}
-          </section>
+          </GamePanel>
 
           {growthModalOpen && <div className="modal-backdrop">
             <form className="modal" onSubmit={applyPopulationGrowth}>
