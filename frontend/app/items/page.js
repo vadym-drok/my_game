@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import ItemIcon from "../../components/nation/ItemIcon";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 function ItemList({ items, empty, t }) {
-  return items.length === 0 ? <p>{empty}</p> : <ul className="items">{items.map((item) => <li key={item.id || item.code}><strong>{item.name}</strong><p>{item.description}</p><span>{t("workerDays", { amount: item.worker_days })} · {t("maxWorkers", { amount: item.max_workers })}</span></li>)}</ul>;
+  return items.length === 0 ? <p>{empty}</p> : <ul className="items">{items.map((item) => <li key={item.id || item.code}><ItemIcon item={item} type="item" /><div><strong>{item.name}</strong><p>{item.description}</p><span>{t("workerDays", { amount: item.worker_days })} · {t("maxWorkers", { amount: item.max_workers })}</span></div></li>)}</ul>;
 }
 
 export default function ItemsPage() {
