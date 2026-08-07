@@ -22,7 +22,6 @@ export default function Sidebar() {
   return <aside className="game-sidebar">
     <Link className="game-identity" href="/" aria-label={t("overview")}>
       <GameIconFrame src="/images/general/game_logo.png" alt="" code="nation" size={78} variant="bare" />
-      <span>My Game</span>
     </Link>
     <nav className="sidebar-nav" aria-label="Main navigation">
       {links.map(([href, label, Icon]) => <Link key={href} className={(href === "/" ? pathname === href : pathname.startsWith(href)) ? "active" : ""} href={href}><Icon aria-hidden="true" /><span>{t(label)}</span></Link>)}
