@@ -3,17 +3,21 @@
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
 import { useRouter } from "next/navigation";
-import { Hammer, History, Users, Warehouse, X } from "lucide-react";
+import { Hammer, History, Warehouse, X } from "lucide-react";
 import PopulationSummary from "../components/nation/PopulationSummary";
 import Toast from "../components/Toast";
+import GameIconFrame from "../components/game-art/GameIconFrame";
 import GameIllustrationFrame from "../components/game-art/GameIllustrationFrame";
 import PageHeader from "../components/layout/PageHeader";
-import GameButton from "../components/ui/GameButton";
 import GamePanel from "../components/ui/GamePanel";
 import GameProgressBar from "../components/ui/GameProgressBar";
 import SectionHeader from "../components/ui/SectionHeader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
+function PopulationArtworkIcon() {
+  return <GameIconFrame src="/images/general/population.png" alt="" code="population" size={24} />;
+}
+
 export default function Home() {
   const t = useTranslations();
   const dataT = useTranslations("Data");
@@ -36,7 +40,8 @@ export default function Home() {
   const storageUsed = nation?.storage?.used ?? 0;
   const storageCapacity = nation?.storage?.capacity ?? 0;
   const storageSufficient = storageCapacity >= storageUsed;
-  const availableWorkers = Math.max(0, (nation?.active_population ?? 0) - activeProcesses.reduce((total, process) => total + process.assigned_workers, 0));
+  const workingWorkers = activeProcesses.reduce((total, process) => total + process.assigned_workers, 0);
+  const availableWorkers = Math.max(0, (nation?.active_population ?? 0) - workingWorkers);
   const food = regularResources.find((resource) => resource.code === "food");
   const foodReserveDays = food?.spending > 0 ? Math.floor(food.amount / food.spending) : null;
   const growthButtonText = nation?.hunger.active
@@ -115,12 +120,12 @@ export default function Home() {
       <Toast message={message} setMessage={setMessage} />
       {!nation ? <p>{t("Common.loading")}</p> : (
         <>
-          <PageHeader eyebrow={t("Home.nationNumber", { id: nation.id })} title={nation.name} actions={<div className="overview-nation-actions"><p className="page-day">{t("Common.day", { day: nation.current_day })}</p><GameButton className={`growth-button ${nation.hunger.active ? "hunger" : ""}`} disabled={!nation.population_growth.available} onClick={openPopulationGrowth}>{growthButtonText}</GameButton></div>} />
+          <PageHeader title={nation.name} actions={<p className="page-day">{t("Common.day", { day: nation.current_day })}</p>} />
 
           <section className="overview-status-grid">
             <GamePanel className="overview-population-panel">
-              <SectionHeader icon={Users} title={t("Home.population")} />
-              <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} />
+              <SectionHeader icon={PopulationArtworkIcon} title={t("Home.population")} />
+              <PopulationSummary nation={nation} housingProvided={housingProvided} housingSufficient={housingSufficient} growthButtonText={growthButtonText} onGrowth={openPopulationGrowth} />
             </GamePanel>
             <GamePanel className="overview-settlement-panel">
               <SectionHeader icon={Warehouse} title={overviewT("settlementStatus")} />
@@ -131,7 +136,7 @@ export default function Home() {
                 </div>
                 <div className="settlement-status-column">
                   <div className="settlement-metric settlement-food-reserve"><strong>{overviewT("foodReserve")}</strong><span>{foodReserveDays === null ? "—" : overviewT("days", { days: foodReserveDays })}</span></div>
-                  <div className="settlement-metric"><div><strong>{overviewT("workersAvailable")}</strong><span>{availableWorkers} / {nation.active_population}</span></div><GameProgressBar value={availableWorkers} max={nation.active_population || 1} /></div>
+                  <div className="settlement-metric settlement-workforce"><div><strong>{overviewT("workforce")}</strong><span>{overviewT("workforceSummary", { working: workingWorkers, available: availableWorkers })}</span></div><GameProgressBar value={workingWorkers} max={nation.active_population || 1} /></div>
                 </div>
               </div>
             </GamePanel>
