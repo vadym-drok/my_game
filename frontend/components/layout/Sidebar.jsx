@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building2, ClipboardList, Globe2, Hammer, Landmark, MapPinned, Package } from "lucide-react";
 import { useTranslations } from "next-intl";
+import GameIconFrame from "../game-art/GameIconFrame";
 
 const links = [
   ["/", "overview", Landmark],
@@ -21,7 +21,7 @@ export default function Sidebar() {
   const t = useTranslations("Nav");
   return <aside className="game-sidebar">
     <Link className="game-identity" href="/" aria-label={t("overview")}>
-      <Image src="/images/general/game_logo.png" alt="" width={58} height={58} priority />
+      <GameIconFrame src="/images/general/game_logo.png" alt="" code="nation" size={78} variant="bare" />
       <span>My Game</span>
     </Link>
     <nav className="sidebar-nav" aria-label="Main navigation">

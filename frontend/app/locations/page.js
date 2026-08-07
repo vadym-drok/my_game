@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import GameIllustrationFrame from "../../components/game-art/GameIllustrationFrame";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 function LocationList({ locations, empty, showWorkerDays, t }) {
-  return locations.length === 0 ? <p>{empty}</p> : <ul className="locations">{locations.map((location) => <li key={location.code}><strong>{location.name}</strong><p>{location.description}</p>{showWorkerDays && <span>{t("workerDays", { amount: location.worker_days })}</span>}</li>)}</ul>;
+  return locations.length === 0 ? <p>{empty}</p> : <ul className="locations">{locations.map((location) => <li key={location.code}><GameIllustrationFrame src={location.image_path} alt={location.name} code={location.code} ratio="16 / 9" className="location-visual" /><div><strong>{location.name}</strong><p>{location.description}</p>{showWorkerDays && <span>{t("workerDays", { amount: location.worker_days })}</span>}</div></li>)}</ul>;
 }
 
 export default function LocationsPage() {
