@@ -164,11 +164,11 @@ async def start_construction(
             session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Будівництво: {definition.name} — {resource.name}", amount=-amount))
     process = Process(
         nation_id=nation_id,
-        name=f"Будівництво: {definition.name}",
         work_type="building",
         mode=WorkMode.FINITE,
         assigned_workers=data.assigned_workers,
         required_worker_days=worker_days,
+        outputs={"building": {"id": definition.id, "name": definition.name}},
         details={"building_definition_id": definition.id, "construction_cost": cost},
     )
     session.add(process)
@@ -437,11 +437,12 @@ async def create_process(
     work_type = result.first()
     if work_type is None:
         raise HTTPException(status_code=422, detail="Unknown work type")
-    if work_type.mode == WorkMode.FINITE and data.required_worker_days is None:
+    mode = data.mode if work_type.code == "other" else WorkMode(work_type.mode)
+    if mode == WorkMode.FINITE and data.required_worker_days is None:
         raise HTTPException(
             status_code=422, detail="Finite processes require worker days"
         )
-    if work_type.mode == WorkMode.CONTINUOUS and data.required_worker_days is not None:
+    if mode == WorkMode.CONTINUOUS and data.required_worker_days is not None:
         raise HTTPException(
             status_code=422, detail="Continuous processes cannot have worker days"
         )
@@ -456,7 +457,7 @@ async def create_process(
         > active_population(nation.population)
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
-    process = Process(nation_id=nation_id, **data.model_dump() | {"mode": work_type.mode})
+    process = Process(nation_id=nation_id, **data.model_dump() | {"mode": mode})
     session.add(process)
     await session.commit()
     await session.refresh(process)

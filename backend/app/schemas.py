@@ -23,9 +23,9 @@ class ProcessStatus(StrEnum):
 
 
 class ProcessCreate(SQLModel):
-    name: str
     work_type: str
     mode: WorkMode
+    description: str = ""
     assigned_workers: int = Field(default=0, ge=0)
     required_worker_days: int | None = Field(default=None, ge=1)
     details: dict = Field(default_factory=dict)

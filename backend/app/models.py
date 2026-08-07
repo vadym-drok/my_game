@@ -150,8 +150,8 @@ class NationItem(SQLModel, table=True):
 class Process(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
-    name: str
     work_type: str
+    description: str = ""
     mode: str
     status: str = "active"
     assigned_workers: int = 0
@@ -159,6 +159,7 @@ class Process(SQLModel, table=True):
     completed_worker_days: int = 0
     started_at: date = Field(default_factory=date.today)
     completed_at: date | None = None
+    outputs: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
     details: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
 
