@@ -141,7 +141,9 @@ export default function Home() {
             <SectionHeader icon={Hammer} title={t("Home.currentProcesses")}><a className="button-secondary" href="/processes">{t("Nav.processes")}</a></SectionHeader>
             <div className="process-preview-list">{activeProcesses.slice(0, 3).map((process) => {
               const workType = workTypesByCode[process.work_type];
-              return <article className="process-preview" key={process.id}><GameIllustrationFrame src={workType?.image_path} alt={workType?.name || process.work_type} code={process.work_type} ratio="4 / 3" className="process-preview-artwork" /><div><strong>{process.name}</strong><span>{t("History.workers", { amount: process.assigned_workers })}</span>{process.mode === "finite" && <span>{process.completed_worker_days} / {process.required_worker_days} {t("Home.workerDays")}</span>}</div></article>;
+              const remainingWorkerDays = Math.max(0, (process.required_worker_days || 0) - process.completed_worker_days);
+              const remainingDays = process.assigned_workers > 0 ? Math.ceil(remainingWorkerDays / process.assigned_workers) : null;
+              return <article className="process-preview" key={process.id}><GameIllustrationFrame src={workType?.image_path} alt={workType?.name || process.work_type} code={process.work_type} ratio="4 / 3" className="process-preview-artwork" /><div><strong>{process.name}</strong><span>{t("History.workers", { amount: process.assigned_workers })}</span>{process.mode === "finite" && <><span className="tooltip process-progress-tooltip" data-tooltip={overviewT("completedWorkerDays", { completed: process.completed_worker_days, required: process.required_worker_days })} tabIndex="0"><GameProgressBar value={process.completed_worker_days} max={process.required_worker_days || 1} /></span><div className="process-preview-remaining">{remainingDays !== null && <span>{overviewT("remainingDays", { days: remainingDays })}</span>}</div></>}</div></article>;
             })}</div>
           </GamePanel>}
 
