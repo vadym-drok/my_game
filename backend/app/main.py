@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, IconFrame, Location, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameItem, Location, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -37,15 +37,6 @@ app.add_middleware(
 )
 
 
-async def icon_frame_paths(session: AsyncSession) -> dict[int, str | None]:
-    result = await session.exec(select(IconFrame))
-    return {frame.id: frame.image_path for frame in result.all() if frame.id is not None}
-
-
-def with_icon_frame(item: Resource | WorkTypeDefinition | BuildingDefinition, paths: dict[int, str | None]) -> dict:
-    return item.model_dump() | {"icon_frame_image_path": paths.get(item.icon_frame_id)}
-
-
 async def building_capacity(session: AsyncSession, nation_id: int, building_type: BuildingType) -> int:
     result = await session.exec(
         select(BuildingDefinition.capacity)
@@ -58,22 +49,19 @@ async def building_capacity(session: AsyncSession, nation_id: int, building_type
 @app.get("/resources")
 async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(Resource).order_by(Resource.order, Resource.id))
-    paths = await icon_frame_paths(session)
-    return [with_icon_frame(item, paths) for item in result.all()]
+    return [item.model_dump() for item in result.all()]
 
 
 @app.get("/work-rules")
 async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.id))
-    paths = await icon_frame_paths(session)
-    return [with_icon_frame(item, paths) for item in result.all()]
+    return [item.model_dump() for item in result.all()]
 
 
 @app.get("/buildings")
 async def list_building_definitions(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.id))
-    paths = await icon_frame_paths(session)
-    return [with_icon_frame(item, paths) for item in result.all()]
+    return [item.model_dump() for item in result.all()]
 
 
 @app.get("/locations", response_model=list[Location])
@@ -107,8 +95,7 @@ async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(
         .where(NationBuilding.nation_id == nation_id)
         .order_by(NationBuilding.id.desc())
     )
-    paths = await icon_frame_paths(session)
-    return [{**with_icon_frame(definition, paths), "id": building.id, "built_at": building.built_at} for building, definition in result.all()]
+    return [{**definition.model_dump(), "id": building.id, "built_at": building.built_at} for building, definition in result.all()]
 
 
 @app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
@@ -253,7 +240,6 @@ async def get_nation(
         .order_by(Resource.order, Resource.id)
     )
     resource_rows = result.all()
-    frames = await icon_frame_paths(session)
     result = await session.exec(select(WorkTypeDefinition))
     work_types = {work_type.code: work_type for work_type in result.all()}
     housing_capacity = await building_capacity(session, nation_id, BuildingType.HOUSING)
@@ -276,7 +262,6 @@ async def get_nation(
                 "code": resource.code,
                 "name": resource.name,
                 "image_path": resource.image_path,
-                "icon_frame_image_path": frames.get(resource.icon_frame_id),
                 "amount": nation_resource.amount,
                 **flow[resource.code],
             }

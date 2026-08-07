@@ -2,16 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {useTranslations} from "next-intl";
-import { ICON_SIZES } from "../settings";
+import ItemIcon from "../../components/nation/ItemIcon";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
-function ItemIcon({ item, type = "resource" }) {
-  const t = useTranslations("Data");
-  const [missing, setMissing] = useState(!item.image_path);
-  const name = t(`workTypes.${item.code}`, {default: item.name || item.code});
-  return <span className={`icon-tooltip tooltip icon-frame ${item.icon_frame_image_path ? "has-frame" : ""}`} style={{ "--icon-size": `${ICON_SIZES[type]}px`, "--icon-frame": `url(${item.icon_frame_image_path})` }} data-tooltip={name} tabIndex="0">{missing ? <span className="game-icon fallback">{item.code}</span> : <img className="game-icon" src={item.image_path} alt={name} onError={() => setMissing(true)} />}</span>;
-}
-
 export default function History() {
   const t = useTranslations();
   const [processes, setProcesses] = useState(null);

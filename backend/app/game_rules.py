@@ -23,6 +23,11 @@ class BuildingType(StrEnum):
     WAREHOUSE = "warehouse"
 
 
+class ItemVisualType(StrEnum):
+    ICON = "icon"
+    ILLUSTRATION = "illustration"
+
+
 class PersonalTaskType(StrEnum):
     ONE_TIME = "one_time"
     PERIODIC = "periodic"

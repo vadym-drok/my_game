@@ -4,16 +4,7 @@ from sqlalchemy import JSON, Column, UniqueConstraint
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from app.game_rules import BuildingType, PersonalTaskStatus, PersonalTaskType, WorkIntensity, WorkMode
-
-
-class IconFrame(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("code"),)
-
-    id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True)
-    name: str
-    image_path: str | None = None
+from app.game_rules import BuildingType, ItemVisualType, PersonalTaskStatus, PersonalTaskType, WorkIntensity, WorkMode
 
 
 class Resource(SQLModel, table=True):
@@ -25,7 +16,6 @@ class Resource(SQLModel, table=True):
     order: int = 0
     storage_coefficient: float = 1
     image_path: str | None = None
-    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
 
 
 class WorkTypeDefinition(SQLModel, table=True):
@@ -38,7 +28,6 @@ class WorkTypeDefinition(SQLModel, table=True):
     mode: str
     outputs: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
     image_path: str | None = None
-    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
 
     @field_validator("mode")
     @classmethod
@@ -55,7 +44,6 @@ class BuildingDefinition(SQLModel, table=True):
     building_type: str
     capacity: int = 0
     image_path: str | None = None
-    icon_frame_id: int | None = Field(default=None, foreign_key="iconframe.id", index=True)
     construction_cost: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
     @field_validator("building_type")
@@ -83,6 +71,7 @@ class GameItem(SQLModel, table=True):
     code: str = Field(primary_key=True)
     name: str
     image_path: str | None = None
+    visual_type: ItemVisualType = Field(default=ItemVisualType.ICON)
     description: str = ""
     worker_days: int = Field(default=0, ge=0)
     construction_resources: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import GameIconFrame from "../game-art/GameIconFrame";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
@@ -20,7 +21,7 @@ export default function ResourceBar({ actions }) {
       {resources.map((resource) => {
         const dailyBalance = resource.income - resource.spending;
         return <div className="resource-bar-item" key={resource.code}>
-          {resource.image_path && <img src={resource.image_path} alt="" />}
+          <GameIconFrame src={resource.image_path} alt="" code={resource.code} size={38} variant="bare" />
           <div><strong>{resource.amount}</strong>{resource.code !== "general_points" && <small className={dailyBalance > 0 ? "positive" : dailyBalance < 0 ? "negative" : "neutral"}>{dailyBalance > 0 ? "+" : ""}{dailyBalance}/day</small>}</div>
           <span className="sr-only">{t.has(`resources.${resource.code}`) ? t(`resources.${resource.code}`) : resource.name}</span>
         </div>;
