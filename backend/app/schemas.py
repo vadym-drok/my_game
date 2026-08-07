@@ -48,6 +48,24 @@ class ResourcePurchase(SQLModel):
     resources: dict[str, int]
 
 
+class LocationMapNodeInput(SQLModel):
+    location_code: str
+    x: float
+    y: float
+
+
+class LocationMapConnectionInput(SQLModel):
+    source: str
+    target: str
+    source_handle: str | None = None
+    target_handle: str | None = None
+
+
+class LocationMapLayoutUpdate(SQLModel):
+    nodes: list[LocationMapNodeInput]
+    connections: list[LocationMapConnectionInput]
+
+
 class ConstructionStart(SQLModel):
     assigned_workers: int = Field(ge=1)
 

@@ -2,13 +2,13 @@ from datetime import date
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, Location, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationMapNode, LocationNeighbor, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -20,6 +20,7 @@ from app.schemas import (
     ProcessUpdate,
     PersonalTaskAction,
     PersonalTaskCreate,
+    LocationMapLayoutUpdate,
 )
 from app.settings import (
     HUNGER_STAGE_ONE_DAYS,
@@ -68,6 +69,39 @@ async def list_building_definitions(session: AsyncSession = Depends(get_session)
 async def list_locations(session: AsyncSession = Depends(get_session)) -> list[Location]:
     result = await session.exec(select(Location).order_by(Location.code))
     return list(result.all())
+
+
+@app.get("/locations/map")
+async def get_location_map(session: AsyncSession = Depends(get_session)) -> dict:
+    nodes = (await session.exec(select(LocationMapNode).order_by(LocationMapNode.location_code))).all()
+    neighbors = (await session.exec(select(LocationNeighbor))).all()
+    connections = {(edge.location_code, edge.neighbor_location_code, edge.location_handle, edge.neighbor_handle) for edge in neighbors}
+    return {
+        "nodes": [node.model_dump() for node in nodes],
+        "connections": [{"source": source, "target": target, "source_handle": source_handle, "target_handle": target_handle} for source, target, source_handle, target_handle in sorted(connections)],
+    }
+
+
+@app.put("/locations/map")
+async def save_location_map(layout: LocationMapLayoutUpdate, session: AsyncSession = Depends(get_session)) -> dict:
+    codes = set((await session.exec(select(Location.code))).all())
+    node_codes = [node.location_code for node in layout.nodes]
+    if len(node_codes) != len(set(node_codes)) or not set(node_codes).issubset(codes):
+        raise HTTPException(status_code=422, detail="Unknown or duplicate location node")
+    connections = {}
+    for edge in layout.connections:
+        source, target, source_handle, target_handle = edge.source, edge.target, edge.source_handle, edge.target_handle
+        if source > target:
+            source, target, source_handle, target_handle = target, source, target_handle, source_handle
+        connections[(source, target)] = (source_handle, target_handle)
+    if any(source == target or source not in node_codes or target not in node_codes for source, target in connections):
+        raise HTTPException(status_code=422, detail="Invalid location connection")
+    await session.exec(delete(LocationMapNode))
+    await session.exec(delete(LocationNeighbor))
+    session.add_all([LocationMapNode(**node.model_dump()) for node in layout.nodes])
+    session.add_all([LocationNeighbor(location_code=source, neighbor_location_code=target, location_handle=handles[0], neighbor_handle=handles[1]) for (source, target), handles in connections.items()])
+    await session.commit()
+    return {"nodes": len(layout.nodes), "connections": len(connections)}
 
 
 @app.get("/items", response_model=list[GameItem])

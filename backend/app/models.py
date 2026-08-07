@@ -66,6 +66,14 @@ class Location(SQLModel, table=True):
 class LocationNeighbor(SQLModel, table=True):
     location_code: str = Field(foreign_key="location.code", primary_key=True)
     neighbor_location_code: str = Field(foreign_key="location.code", primary_key=True)
+    location_handle: str | None = None
+    neighbor_handle: str | None = None
+
+
+class LocationMapNode(SQLModel, table=True):
+    location_code: str = Field(foreign_key="location.code", primary_key=True)
+    x: float
+    y: float
 
 
 class GameItem(SQLModel, table=True):
