@@ -247,7 +247,7 @@ async def get_nation(
     storage_used = sum(
         nation_resource.amount * resource.storage_coefficient
         for nation_resource, resource in resource_rows
-        if resource.code != "general_points"
+        if not resource.is_system
     )
     resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
     flow = daily_resource_flow(nation, process_rows, resource_amounts, work_types)
@@ -393,9 +393,9 @@ async def purchase_resources(
     used_storage = sum(
         nation_resource.amount * resource.storage_coefficient
         for code, (nation_resource, resource) in resources.items()
-        if code != "general_points"
+        if not resource.is_system
     )
-    purchased_storage = sum(purchases[code] * resources[code][1].storage_coefficient for code in purchases)
+    purchased_storage = sum(purchases[code] * resources[code][1].storage_coefficient for code in purchases if not resources[code][1].is_system)
     if used_storage + purchased_storage > await building_capacity(session, nation_id, BuildingType.WAREHOUSE):
         raise HTTPException(status_code=422, detail="Not enough warehouse capacity")
     points.amount -= total_cost

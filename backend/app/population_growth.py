@@ -6,7 +6,7 @@ from app.settings import (
 
 
 def population_growth_limit(population: int) -> int:
-    return population * POPULATION_GROWTH_PERCENT // 100
+    return max(1, (population * POPULATION_GROWTH_PERCENT + 50) // 100) if population else 0
 
 
 def population_growth_available(nation: Nation) -> bool:

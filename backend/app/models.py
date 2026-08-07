@@ -15,6 +15,7 @@ class Resource(SQLModel, table=True):
     name: str
     order: int = 0
     storage_coefficient: float = 1
+    is_system: bool = False
     image_path: str | None = None
 
 

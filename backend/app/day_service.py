@@ -144,17 +144,17 @@ async def advance_day(
     free_storage = warehouse_capacity - sum(
         post_spending[resource.code] * resource.storage_coefficient
         for _, resource in resource_rows
-        if resource.code != "general_points"
+        if not resource.is_system
     )
     resources_snapshot = {}
     uncollected: list[tuple[str, float]] = []
     for nation_resource, resource in resource_rows:
         flow = resource_flow[resource.code]
         income = flow["income"]
-        stored_income = income if resource.code == "general_points" else storable_income(
+        stored_income = income if resource.is_system else storable_income(
             income, resource.storage_coefficient, free_storage
         )
-        if resource.code != "general_points":
+        if not resource.is_system:
             free_storage -= stored_income * resource.storage_coefficient
         if income > stored_income:
             uncollected.append((resource.name, income - stored_income))
