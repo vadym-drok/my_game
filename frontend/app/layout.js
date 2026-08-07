@@ -2,7 +2,7 @@ import "./globals.css";
 import {NextIntlClientProvider} from "next-intl";
 import {getLocale, getTranslations} from "next-intl/server";
 import LanguageSwitcher from "./language-switcher";
-import AppNav from "../components/AppNav";
+import GameShell from "../components/layout/GameShell";
 
 export async function generateMetadata() {
   const t = await getTranslations();
@@ -17,7 +17,7 @@ export default async function RootLayout({ children }) {
   const locale = await getLocale();
   return (
     <html lang={locale}>
-      <body><NextIntlClientProvider><AppNav /><LanguageSwitcher />{children}</NextIntlClientProvider></body>
+      <body><NextIntlClientProvider><GameShell actions={<LanguageSwitcher />}>{children}</GameShell></NextIntlClientProvider></body>
     </html>
   );
 }
