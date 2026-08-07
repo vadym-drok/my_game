@@ -120,7 +120,7 @@ export default function Home() {
       <Toast message={message} setMessage={setMessage} />
       {!nation ? <p>{t("Common.loading")}</p> : (
         <>
-          <PageHeader title={nation.name} actions={<p className="page-day">{t("Common.day", { day: nation.current_day })}</p>} />
+          <PageHeader className="overview-page-header" title={nation.name} artwork="/images/general/nation_overview_header.webp" artworkAlt="" artworkPosition="52% 100%" actions={<p className="page-day">{t("Common.day", { day: nation.current_day })}</p>} />
 
           <section className="overview-status-grid">
             <GamePanel className="overview-population-panel">
