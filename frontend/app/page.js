@@ -8,7 +8,6 @@ import PopulationSummary from "../components/nation/PopulationSummary";
 import Toast from "../components/Toast";
 import GameIconFrame from "../components/game-art/GameIconFrame";
 import GameIllustrationFrame from "../components/game-art/GameIllustrationFrame";
-import PageHeader from "../components/layout/PageHeader";
 import GamePanel from "../components/ui/GamePanel";
 import GameProgressBar from "../components/ui/GameProgressBar";
 import SectionHeader from "../components/ui/SectionHeader";
@@ -120,8 +119,6 @@ export default function Home() {
       <Toast message={message} setMessage={setMessage} />
       {!nation ? <p>{t("Common.loading")}</p> : (
         <>
-          <PageHeader className="overview-page-header" title={nation.name} artwork="/images/general/nation_overview_header.webp" artworkAlt="" artworkPosition="52% 100%" actions={<p className="page-day">{t("Common.day", { day: nation.current_day })}</p>} />
-
           <section className="overview-status-grid">
             <GamePanel className="overview-population-panel">
               <SectionHeader icon={PopulationArtworkIcon} title={t("Home.population")} />
