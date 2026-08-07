@@ -127,7 +127,7 @@ export default function Home() {
               <div className="settlement-status-grid">
                 <div className="settlement-status-column">
                   <div className="settlement-metric"><div><strong>{dataT("buildingTypes.housing")}</strong><span>{nation.population} / {housingProvided}</span></div><GameProgressBar value={Math.min(nation.population, housingProvided)} max={housingProvided || 1} className={!housingSufficient ? "is-overflow" : ""} /></div>
-                  <div className="settlement-metric"><div><strong>{dataT("buildingTypes.warehouse")}</strong><span className={storageSufficient ? "storage-capacity sufficient" : "storage-capacity insufficient"}>{storageUsed} / {storageCapacity}</span></div><GameProgressBar value={Math.min(storageUsed, storageCapacity)} max={storageCapacity || 1} className={!storageSufficient ? "is-overflow" : ""} /></div>
+                  <div className="settlement-metric"><div><strong>{overviewT("storage")}</strong><span className={storageSufficient ? "storage-capacity sufficient" : "storage-capacity insufficient"}>{storageUsed} / {storageCapacity}</span></div><GameProgressBar value={Math.min(storageUsed, storageCapacity)} max={storageCapacity || 1} className={!storageSufficient ? "is-overflow" : ""} /></div>
                 </div>
                 <div className="settlement-status-column">
                   <div className="settlement-metric settlement-food-reserve"><strong>{overviewT("foodReserve")}</strong><span>{foodReserveDays === null ? "—" : overviewT("days", { days: foodReserveDays })}</span></div>
