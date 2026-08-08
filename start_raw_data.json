@@ -1,0 +1,165 @@
+{
+  "resources": [
+    {
+      "code": "general_points",
+      "name": "General points",
+      "order": 0,
+      "storage_coefficient": 1,
+      "is_system": true,
+      "image_path": "/images/resources/general_points.png"
+    },
+    {
+      "code": "food",
+      "name": "Food",
+      "order": 10,
+      "storage_coefficient": 1,
+      "image_path": "/images/resources/food.png"
+    },
+    {
+      "code": "wood",
+      "name": "Wood",
+      "order": 20,
+      "storage_coefficient": 1,
+      "image_path": "/images/resources/wood.png"
+    },
+    {
+      "code": "stone",
+      "name": "Stone",
+      "order": 30,
+      "storage_coefficient": 1,
+      "image_path": "/images/resources/stone.png"
+    }
+  ],
+
+  "work_types": [
+    {
+      "code": "hunting", "name": "Hunting", "intensity": "BASE", "mode": "continuous",
+      "outputs": {"food": 3},
+      "image_path": "/images/work-types/hunting.webp"},
+    {
+      "code": "food_gathering", "name": "Food gathering", "intensity": "BASE", "mode": "continuous",
+      "outputs": {"food": 2},
+      "image_path": "/images/work-types/food_gathering.webp"
+    },
+    {
+      "code": "fishing", "name": "Fishing", "intensity": "BASE", "mode": "continuous",
+      "outputs": {"food": 3},
+      "image_path": "/images/work-types/fishing.webp"
+    },
+    {
+      "code": "woodcutting", "name": "Woodcutting", "intensity": "STANDARD", "mode": "continuous",
+      "outputs": {"wood": 1},
+      "image_path": "/images/work-types/woodcutting.webp"
+    },
+    {
+      "code": "building", "name": "Building", "intensity": "LIGHT", "mode": "finite",
+      "outputs": {},
+      "image_path": "/images/work-types/building.webp"
+    },
+    {
+      "code": "investigation", "name": "Investigation", "intensity": "STANDARD", "mode": "finite",
+      "outputs": {},
+      "image_path": "/images/work-types/investigation.png"
+    },
+    {
+      "code": "mining", "name": "Mining", "intensity": "HEAVY", "mode": "continuous",
+      "outputs": {"stone": 1},
+      "image_path": "/images/work-types/mining.png"
+    },
+    {
+      "code": "other", "name": "Other", "intensity": "BASE", "mode": "continuous",
+      "outputs": {},
+      "image_path": null
+    }
+  ],
+
+  "buildings": [
+    {
+      "code": "tent", "name": "Tent", "building_type": "housing", "capacity": 10,
+      "image_path": "/images/buildings/tent.png",
+      "construction_cost": {"resources": {"wood": 15}, "worker_days": 10}
+    },
+    {
+      "code": "warehouse", "name": "Warehouse", "building_type": "warehouse", "capacity": 100,
+      "image_path": "/images/buildings/warehouse.png",
+      "construction_cost": {"resources": {"wood": 10}, "worker_days": 5}
+    }
+  ],
+
+  "locations": [
+    {
+      "code": "starting_bay",
+      "name": "Starting Bay",
+      "image_path": null,
+      "description": "The sheltered bay where the ship first made landfall.",
+      "is_discovered": true,
+      "worker_days": 0,
+      "requirements": {},
+      "neighbors": ["forest", "riverbank", "high_hill"]
+    },
+    {
+      "code": "forest",
+      "name": "Forest",
+      "image_path": null,
+      "description": "A dense forest rich with timber and wild food.",
+      "is_discovered": false,
+      "worker_days": 3,
+      "requirements": {},
+      "neighbors": ["starting_bay", "high_hill", "riverbank"]
+    },
+    {
+      "code": "high_hill",
+      "name": "High Hill",
+      "image_path": null,
+      "description": "A steep, high hill that rises almost like a small mountain.",
+      "is_discovered": false,
+      "worker_days": 3,
+      "requirements": {},
+      "neighbors": ["starting_bay", "forest"]
+    },
+    {
+      "code": "riverbank",
+      "name": "Riverbank",
+      "image_path": null,
+      "description": "The fertile banks along the river.",
+      "is_discovered": false,
+      "worker_days": 3,
+      "requirements": {},
+      "neighbors": ["starting_bay", "forest"]
+    }
+  ],
+
+  "game_items": [
+    {
+      "code": "fishing_boat",
+      "name": "Fishing Boat",
+      "image_path": "/images/game_items/fishing_boat.png",
+      "visual_type": "illustration",
+      "description": "A small boat for fishing.",
+      "worker_days": 10,
+      "construction_resources": {},
+      "additional_data": {},
+      "max_workers": 3,
+      "outputs": {}
+    },
+    {
+      "code": "merchant_ship",
+      "name": "Merchant Ship",
+      "image_path": "/images/game_items/merchant_ship.png",
+      "visual_type": "illustration",
+      "description": "",
+      "worker_days": 100,
+      "construction_resources": {},
+      "additional_data": {"warehouse_capacity": 3000},
+      "max_workers": 60,
+      "outputs": {}
+    }
+  ],
+
+  "nation": {
+    "name": "Octavians",
+    "population": 50,
+    "influence": 0,
+    "housing_capacity": 0
+  }
+}
