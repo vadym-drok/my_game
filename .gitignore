@@ -7,5 +7,5 @@ frontend/.next/
 frontend/node_modules/
 frontend/public/images/
 
-start_raw_data.json
+personal_data.json
 
