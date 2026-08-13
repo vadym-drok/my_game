@@ -23,6 +23,7 @@ class ProcessStatus(StrEnum):
 
 
 class ProcessCreate(SQLModel):
+    location_code: str
     work_type: str
     mode: WorkMode
     description: str = ""

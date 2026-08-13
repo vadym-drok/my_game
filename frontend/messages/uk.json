@@ -113,6 +113,8 @@
     "mode": "Режим"
   },
   "Processes": {
+    "location": "Локація",
+    "noAvailableWork": "У цій локації немає доступних типів робіт.",
     "description": "Опис",
     "descriptionUnavailable": "Для цього типу роботи немає деталей.",
     "mode": "Режим",

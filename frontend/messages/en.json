@@ -113,6 +113,8 @@
     "mode": "Mode"
   },
   "Processes": {
+    "location": "Location",
+    "noAvailableWork": "No work types are available at this location.",
     "description": "Description",
     "descriptionUnavailable": "No details are available for this work type.",
     "mode": "Mode",

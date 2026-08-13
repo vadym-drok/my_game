@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationMapNode, LocationNeighbor, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationMapNode, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -65,10 +65,15 @@ async def list_building_definitions(session: AsyncSession = Depends(get_session)
     return [item.model_dump() for item in result.all()]
 
 
-@app.get("/locations", response_model=list[Location])
-async def list_locations(session: AsyncSession = Depends(get_session)) -> list[Location]:
+@app.get("/locations")
+async def list_locations(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(Location).order_by(Location.code))
-    return list(result.all())
+    locations = result.all()
+    result = await session.exec(select(LocationWorkType))
+    work_types = {}
+    for link in result.all():
+        work_types.setdefault(link.location_code, []).append(link.work_type_code)
+    return [{**location.model_dump(), "work_types": work_types.get(location.code, [])} for location in locations]
 
 
 @app.get("/locations/map")
@@ -471,6 +476,12 @@ async def create_process(
     work_type = result.first()
     if work_type is None:
         raise HTTPException(status_code=422, detail="Unknown work type")
+    location = await session.get(Location, data.location_code)
+    if location is None or not location.is_discovered:
+        raise HTTPException(status_code=422, detail="Location is not discovered")
+    result = await session.exec(select(LocationWorkType).where(LocationWorkType.location_code == data.location_code, LocationWorkType.work_type_code == data.work_type))
+    if result.first() is None:
+        raise HTTPException(status_code=422, detail="Work type is not available at this location")
     mode = data.mode if work_type.code == "other" else WorkMode(work_type.mode)
     if mode == WorkMode.FINITE and data.required_worker_days is None:
         raise HTTPException(

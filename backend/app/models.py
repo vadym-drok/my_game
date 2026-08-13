@@ -70,6 +70,11 @@ class LocationNeighbor(SQLModel, table=True):
     neighbor_handle: str | None = None
 
 
+class LocationWorkType(SQLModel, table=True):
+    location_code: str = Field(foreign_key="location.code", primary_key=True)
+    work_type_code: str = Field(foreign_key="worktypedefinition.code", primary_key=True)
+
+
 class LocationMapNode(SQLModel, table=True):
     location_code: str = Field(foreign_key="location.code", primary_key=True)
     x: float
@@ -158,6 +163,7 @@ class NationItem(SQLModel, table=True):
 class Process(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
+    location_code: str | None = Field(default=None, foreign_key="location.code", index=True)
     work_type: str
     description: str = ""
     mode: str
