@@ -14,6 +14,7 @@ from app.schemas import (
     NationCreate,
     ConstructionStart,
     BuildingAdd,
+    DiscoveryStart,
     PopulationGrowth,
     ResourceAdjustment,
     ResourcePurchase,
@@ -524,6 +525,48 @@ async def create_process(
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
     process = Process(nation_id=nation_id, **data.model_dump(exclude={"work_type"}) | {"work_type_id": work_type.id, "mode": mode})
     session.add(process)
+    await session.commit()
+    await session.refresh(process)
+    return process
+
+
+@app.post("/nations/{nation_id}/locations/{location_code}/discovery", response_model=Process)
+async def start_location_discovery(
+    nation_id: int,
+    location_code: str,
+    data: DiscoveryStart,
+    session: AsyncSession = Depends(get_session),
+) -> Process:
+    nation = await session.get(Nation, nation_id)
+    target = await session.get(NationLocation, (nation_id, location_code))
+    location = await session.get(Location, location_code)
+    if nation is None or target is None or location is None:
+        raise HTTPException(status_code=404, detail="Nation or location not found")
+    if target.is_discovered:
+        raise HTTPException(status_code=422, detail="Location is already discovered")
+    neighbors = (await session.exec(select(LocationNeighbor))).all()
+    neighbor_codes = [edge.neighbor_location_code if edge.location_code == location_code else edge.location_code for edge in neighbors if location_code in {edge.location_code, edge.neighbor_location_code}]
+    discovered_neighbors = [await session.get(NationLocation, (nation_id, code)) for code in neighbor_codes]
+    if not any(neighbor and neighbor.is_discovered for neighbor in discovered_neighbors):
+        raise HTTPException(status_code=422, detail="Location has no discovered neighbor")
+    result = await session.exec(select(WorkTypeDefinition).where(WorkTypeDefinition.code == "investigation"))
+    work_type = result.first()
+    if work_type is None or work_type.mode != WorkMode.FINITE:
+        raise HTTPException(status_code=422, detail="Investigation work type is unavailable")
+    result = await session.exec(select(LocationWorkType).where(LocationWorkType.location_code == location_code, LocationWorkType.work_type_code == "investigation"))
+    if result.first() is None:
+        raise HTTPException(status_code=422, detail="Investigation is not available at this location")
+    result = await session.exec(select(Process).where(Process.nation_id == nation_id, Process.status == "active"))
+    active_processes = result.all()
+    if any(process.details.get("discovery_location_code") == location_code for process in active_processes):
+        raise HTTPException(status_code=422, detail="Location discovery is already in progress")
+    if sum(process.assigned_workers for process in active_processes) + data.assigned_workers > active_population(nation.population):
+        raise HTTPException(status_code=422, detail="Active population limit exceeded")
+    if location.worker_days < 1:
+        raise HTTPException(status_code=422, detail="Location requires worker days")
+    process = Process(nation_id=nation_id, location_code=location_code, work_type_id=work_type.id, mode=WorkMode.FINITE, assigned_workers=data.assigned_workers, required_worker_days=location.worker_days, details={"discovery_location_code": location_code})
+    session.add(process)
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Розпочато відкриття локації: {location.name}", amount=0))
     await session.commit()
     await session.refresh(process)
     return process

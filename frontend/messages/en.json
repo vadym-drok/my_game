@@ -177,6 +177,13 @@
     "saveFailed": "Could not save the map layout.",
     "emptyMap": "Place locations on the map in Edit mode.",
     "connectionHint": "Drag between points to draw a road. Drag a road end away to remove it."
+    ,"discoveryTitle": "Discover {name}",
+    "discoveryHint": "This expedition requires {days} worker-days.",
+    "discoveryWorkers": "Investigators (1–3)",
+    "startDiscovery": "Send investigators",
+    "cancel": "Cancel",
+    "discoveryStarted": "Discovery started.",
+    "discoveryFailed": "Could not start discovery."
   },
   "Items": {
     "eyebrow": "Nation simulator",

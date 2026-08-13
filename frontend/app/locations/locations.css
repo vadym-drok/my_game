@@ -107,6 +107,16 @@
   stroke: var(--danger);
 }
 
+.locations-map-canvas .react-flow__edge.is-discovered .react-flow__edge-path {
+  stroke: #4f7d3b;
+  filter: drop-shadow(0 0 3px #7db75acc);
+}
+
+.locations-map-canvas .react-flow__edge.is-discovering .react-flow__edge-path {
+  stroke: #b66d1e;
+  filter: drop-shadow(0 0 3px #e09a43cc);
+}
+
 .location-map-node {
   position: relative;
   display: grid;
@@ -141,6 +151,12 @@
 .location-map-node.is-discovered .location-map-art-slot {
   border-color: #4f7d3b;
   box-shadow: 0 0 0 2px #7db75a99, 0 2px 3px #33210e66;
+}
+
+.location-map-node.is-discovering img,
+.location-map-node.is-discovering .location-map-art-slot {
+  border-color: #b66d1e;
+  box-shadow: 0 0 0 2px #e09a4399, 0 2px 3px #33210e66;
 }
 
 .location-map-node strong {

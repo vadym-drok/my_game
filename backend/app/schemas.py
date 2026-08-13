@@ -76,6 +76,10 @@ class BuildingAdd(SQLModel):
     location_code: str
 
 
+class DiscoveryStart(SQLModel):
+    assigned_workers: int = Field(ge=1, le=3)
+
+
 class PersonalTaskCreate(SQLModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(min_length=1)
