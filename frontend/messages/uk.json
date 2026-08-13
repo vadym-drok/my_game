@@ -147,6 +147,8 @@
   "Buildings": {
     "title": "Будівлі",
     "available": "Доступні будівлі",
+    "underConstruction": "У будівництві",
+    "noneUnderConstruction": "Немає будівель у будівництві.",
     "built": "Побудовані будівлі",
     "noneBuilt": "Ще нічого не побудовано.",
     "cost": "Вартість:",
@@ -159,6 +161,7 @@
     "location": "Локація",
     "selectLocation": "Оберіть локацію",
     "startConstruction": "Розпочати",
+    "manageProcess": "Керувати процесом",
     "notEnoughResource": "Недостатньо ресурсу: {resource}.",
     "missingWorkerDays": "Для будівлі не задані людино-дні.",
     "noWorkers": "Немає доступних працівників.",

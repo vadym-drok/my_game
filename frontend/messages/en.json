@@ -147,6 +147,8 @@
   "Buildings": {
     "title": "Buildings",
     "available": "Available buildings",
+    "underConstruction": "Under construction",
+    "noneUnderConstruction": "No buildings are under construction.",
     "built": "Built buildings",
     "noneBuilt": "Nothing has been built yet.",
     "cost": "Cost:",
@@ -159,6 +161,7 @@
     "location": "Location",
     "selectLocation": "Choose a location",
     "startConstruction": "Start construction",
+    "manageProcess": "Manage process",
     "notEnoughResource": "Not enough resource: {resource}.",
     "missingWorkerDays": "Worker-days are not set for this building.",
     "noWorkers": "No workers are available.",

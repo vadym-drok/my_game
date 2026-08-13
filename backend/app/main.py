@@ -529,6 +529,8 @@ async def create_process(
         raise HTTPException(status_code=422, detail="Unknown work type")
     if work_type.code == "investigation":
         raise HTTPException(status_code=422, detail="Start investigations from the location map")
+    if work_type.code == "building":
+        raise HTTPException(status_code=422, detail="Start construction from buildings")
     if data.nation_building_id is not None:
         building = await session.get(NationBuilding, data.nation_building_id)
         if building is None or building.nation_id != nation_id:
