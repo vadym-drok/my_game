@@ -97,7 +97,6 @@
       "name": "Starting Bay",
       "image_path": "/images/locations/starting_bay.webp",
       "description": "The sheltered bay where the ship first made landfall.",
-      "is_discovered": true,
       "worker_days": 0,
       "requirements": {},
       "work_types": ["building", "fishing"],
@@ -109,7 +108,6 @@
       "name": "Forest",
       "image_path": "/images/locations/forest.webp",
       "description": "A dense forest rich with timber and wild food.",
-      "is_discovered": false,
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "hunting", "woodcutting", "food_gathering"],
@@ -121,7 +119,6 @@
       "name": "High Hill",
       "image_path": "/images/locations/high_hill.webp",
       "description": "A steep, high hill that rises almost like a small mountain.",
-      "is_discovered": false,
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "food_gathering",  "mining"],
@@ -133,7 +130,6 @@
       "name": "Riverbank",
       "image_path": "/images/locations/riverbank.webp",
       "description": "The fertile banks along the river.",
-      "is_discovered": false,
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "woodcutting", "fishing"],
@@ -173,6 +169,7 @@
     "name": "Octavians",
     "population": 50,
     "influence": 0,
-    "housing_capacity": 0
+    "housing_capacity": 0,
+    "discovered_locations": ["starting_bay"]
   }
 }

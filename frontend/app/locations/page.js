@@ -47,7 +47,9 @@ export default function LocationsPage() {
   const syncEditing = useCallback((value) => setNodes((current) => current.map((node) => ({ ...node, draggable: value, data: { ...node.data, editing: value } }))), [setNodes]);
 
   useEffect(() => {
-    Promise.all([fetch(`${API_URL}/locations`).then((response) => response.json()), fetch(`${API_URL}/locations/map`).then((response) => response.json())])
+    const nationId = window.localStorage.getItem("nationId");
+    if (!nationId) return;
+    Promise.all([fetch(`${API_URL}/nations/${nationId}/locations`).then((response) => response.json()), fetch(`${API_URL}/locations/map`).then((response) => response.json())])
       .then(([definitions, layout]) => {
         setLocations(definitions);
         const byCode = new Map(definitions.map((location) => [location.code, location]));

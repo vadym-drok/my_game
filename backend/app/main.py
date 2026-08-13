@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationBuildingDefinition, LocationMapNode, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationBuildingDefinition, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLocation, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -48,9 +48,9 @@ async def building_capacity(session: AsyncSession, nation_id: int, building_type
     return sum(result.all())
 
 
-async def validate_building_location(session: AsyncSession, location_code: str, building_code: str) -> None:
-    location = await session.get(Location, location_code)
-    if location is None or not location.is_discovered:
+async def validate_building_location(session: AsyncSession, nation_id: int, location_code: str, building_code: str) -> None:
+    nation_location = await session.get(NationLocation, (nation_id, location_code))
+    if nation_location is None or not nation_location.is_discovered:
         raise HTTPException(status_code=422, detail="Location is not discovered")
     result = await session.exec(select(LocationBuildingDefinition).where(LocationBuildingDefinition.location_code == location_code, LocationBuildingDefinition.building_code == building_code))
     if result.first() is None:
@@ -75,9 +75,11 @@ async def list_building_definitions(session: AsyncSession = Depends(get_session)
     return [item.model_dump() for item in result.all()]
 
 
-@app.get("/locations")
-async def list_locations(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    result = await session.exec(select(Location).order_by(Location.code))
+@app.get("/nations/{nation_id}/locations")
+async def list_locations(nation_id: int, session: AsyncSession = Depends(get_session)) -> list[dict]:
+    if await session.get(Nation, nation_id) is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    result = await session.exec(select(Location, NationLocation).join(NationLocation, NationLocation.location_code == Location.code).where(NationLocation.nation_id == nation_id).order_by(Location.code))
     locations = result.all()
     result = await session.exec(select(LocationWorkType))
     work_types = {}
@@ -87,16 +89,16 @@ async def list_locations(session: AsyncSession = Depends(get_session)) -> list[d
     buildings = {}
     for link in result.all():
         buildings.setdefault(link.location_code, []).append(link.building_code)
-    return [{**location.model_dump(), "work_types": work_types.get(location.code, []), "buildings": buildings.get(location.code, [])} for location in locations]
+    return [{**location.model_dump(), "is_discovered": nation_location.is_discovered, "work_types": work_types.get(location.code, []), "buildings": buildings.get(location.code, [])} for location, nation_location in locations]
 
 
 @app.get("/locations/map")
 async def get_location_map(session: AsyncSession = Depends(get_session)) -> dict:
-    nodes = (await session.exec(select(LocationMapNode).order_by(LocationMapNode.location_code))).all()
+    locations = (await session.exec(select(Location).order_by(Location.code))).all()
     neighbors = (await session.exec(select(LocationNeighbor))).all()
     connections = {(edge.location_code, edge.neighbor_location_code, edge.location_handle, edge.neighbor_handle) for edge in neighbors}
     return {
-        "nodes": [node.model_dump() for node in nodes],
+        "nodes": [{"location_code": location.code, "x": location.map_x, "y": location.map_y} for location in locations],
         "connections": [{"source": source, "target": target, "source_handle": source_handle, "target_handle": target_handle} for source, target, source_handle, target_handle in sorted(connections)],
     }
 
@@ -115,9 +117,11 @@ async def save_location_map(layout: LocationMapLayoutUpdate, session: AsyncSessi
         connections[(source, target)] = (source_handle, target_handle)
     if any(source == target or source not in node_codes or target not in node_codes for source, target in connections):
         raise HTTPException(status_code=422, detail="Invalid location connection")
-    await session.exec(delete(LocationMapNode))
     await session.exec(delete(LocationNeighbor))
-    session.add_all([LocationMapNode(**node.model_dump()) for node in layout.nodes])
+    for node in layout.nodes:
+        location = await session.get(Location, node.location_code)
+        location.map_x, location.map_y = node.x, node.y
+        session.add(location)
     session.add_all([LocationNeighbor(location_code=source, neighbor_location_code=target, location_handle=handles[0], neighbor_handle=handles[1]) for (source, target), handles in connections.items()])
     await session.commit()
     return {"nodes": len(layout.nodes), "connections": len(connections)}
@@ -160,7 +164,7 @@ async def build(nation_id: int, code: str, data: BuildingAdd, session: AsyncSess
     definition = result.first()
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
-    await validate_building_location(session, data.location_code, code)
+    await validate_building_location(session, nation_id, data.location_code, code)
     building = NationBuilding(nation_id=nation_id, location_code=data.location_code, building_definition_id=definition.id)
     session.add(building)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
@@ -183,7 +187,7 @@ async def start_construction(
     definition = result.first()
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
-    await validate_building_location(session, data.location_code, code)
+    await validate_building_location(session, nation_id, data.location_code, code)
     cost = definition.construction_cost
     worker_days = cost.get("worker_days", 0)
     if not isinstance(worker_days, int) or worker_days < 1:
@@ -217,7 +221,7 @@ async def start_construction(
     process = Process(
         nation_id=nation_id,
         location_code=data.location_code,
-        work_type="building",
+        work_type_id=work_type.id,
         mode=WorkMode.FINITE,
         assigned_workers=data.assigned_workers,
         required_worker_days=worker_days,
@@ -251,6 +255,8 @@ async def create_nation(
     session.add(nation)
     await session.commit()
     await session.refresh(nation)
+    locations = (await session.exec(select(Location))).all()
+    session.add_all([NationLocation(nation_id=nation.id, location_code=location.code, is_discovered=location.code == "starting_bay") for location in locations])
     result = await session.exec(select(Resource))
     for resource in result.all():
         session.add(
@@ -294,7 +300,7 @@ async def get_nation(
     )
     resource_rows = result.all()
     result = await session.exec(select(WorkTypeDefinition))
-    work_types = {work_type.code: work_type for work_type in result.all()}
+    work_types = {work_type.id: work_type for work_type in result.all()}
     housing_capacity = await building_capacity(session, nation_id, BuildingType.HOUSING)
     warehouse_capacity = await building_capacity(session, nation_id, BuildingType.WAREHOUSE)
     storage_used = sum(
@@ -490,8 +496,8 @@ async def create_process(
     work_type = result.first()
     if work_type is None:
         raise HTTPException(status_code=422, detail="Unknown work type")
-    location = await session.get(Location, data.location_code)
-    if location is None or not location.is_discovered:
+    nation_location = await session.get(NationLocation, (nation_id, data.location_code))
+    if nation_location is None or not nation_location.is_discovered:
         raise HTTPException(status_code=422, detail="Location is not discovered")
     result = await session.exec(select(LocationWorkType).where(LocationWorkType.location_code == data.location_code, LocationWorkType.work_type_code == data.work_type))
     if result.first() is None:
@@ -516,23 +522,24 @@ async def create_process(
         > active_population(nation.population)
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
-    process = Process(nation_id=nation_id, **data.model_dump() | {"mode": mode})
+    process = Process(nation_id=nation_id, **data.model_dump(exclude={"work_type"}) | {"work_type_id": work_type.id, "mode": mode})
     session.add(process)
     await session.commit()
     await session.refresh(process)
     return process
 
 
-@app.get("/nations/{nation_id}/processes", response_model=list[Process])
+@app.get("/nations/{nation_id}/processes")
 async def list_processes(
     nation_id: int, session: AsyncSession = Depends(get_session)
-) -> list[Process]:
+) -> list[dict]:
     result = await session.exec(
-        select(Process)
+        select(Process, WorkTypeDefinition)
+        .join(WorkTypeDefinition, Process.work_type_id == WorkTypeDefinition.id)
         .where(Process.nation_id == nation_id)
         .order_by(Process.id.desc())
     )
-    return list(result.all())
+    return [{**process.model_dump(), "work_type": work_type.code} for process, work_type in result.all()]
 
 
 @app.post("/nations/{nation_id}/personal-tasks", response_model=PersonalTask)

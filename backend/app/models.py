@@ -58,7 +58,8 @@ class Location(SQLModel, table=True):
     name: str
     image_path: str | None = None
     description: str = ""
-    is_discovered: bool = False
+    map_x: float = 0
+    map_y: float = 0
     worker_days: int = Field(default=0, ge=0)
     requirements: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
@@ -80,10 +81,10 @@ class LocationBuildingDefinition(SQLModel, table=True):
     building_code: str = Field(foreign_key="buildingdefinition.code", primary_key=True)
 
 
-class LocationMapNode(SQLModel, table=True):
+class NationLocation(SQLModel, table=True):
+    nation_id: int = Field(foreign_key="nation.id", primary_key=True)
     location_code: str = Field(foreign_key="location.code", primary_key=True)
-    x: float
-    y: float
+    is_discovered: bool = False
 
 
 class GameItem(SQLModel, table=True):
@@ -170,7 +171,7 @@ class Process(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
     location_code: str | None = Field(default=None, foreign_key="location.code", index=True)
-    work_type: str
+    work_type_id: int = Field(foreign_key="worktypedefinition.id", index=True)
     description: str = ""
     mode: str
     status: str = "active"

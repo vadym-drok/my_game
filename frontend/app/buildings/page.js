@@ -48,7 +48,7 @@ export default function Buildings() {
       fetch(`${API_URL}/resources`).then((response) => response.json()),
       fetch(`${API_URL}/nations/${id}`).then((response) => response.json()),
       fetch(`${API_URL}/nations/${id}/processes`).then((response) => response.json()),
-      fetch(`${API_URL}/locations`).then((response) => response.json()),
+      fetch(`${API_URL}/nations/${id}/locations`).then((response) => response.json()),
     ]);
     setDefinitions(available); setBuilt(existing); setResources(resourceDefinitions); setNation(nationData); setProcesses(nationProcesses); setLocations(locationData);
   }

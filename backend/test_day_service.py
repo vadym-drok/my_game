@@ -37,9 +37,10 @@ async def test_get_work_rules() -> None:
 
 def test_daily_resource_flow() -> None:
     nation = Nation(name="Test", population=10, start_date=date.today())
-    process = Process(nation_id=1, work_type="woodcutting", mode="continuous", assigned_workers=5)
+    process = Process(nation_id=1, work_type_id=1, mode="continuous", assigned_workers=5)
     work_types = {
-        "woodcutting": WorkTypeDefinition(
+        1: WorkTypeDefinition(
+            id=1,
             code="woodcutting", name="Woodcutting", intensity=WorkIntensity.STANDARD,
             mode=WorkMode.CONTINUOUS, outputs={"wood": 1},
         )
