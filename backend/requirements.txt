@@ -2,5 +2,7 @@ alembic
 fastapi
 pydantic-settings
 psycopg[binary]
+pytest
+pytest-asyncio
 sqlmodel
 uvicorn[standard]

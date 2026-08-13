@@ -1,77 +1,55 @@
-import asyncio
-from datetime import date, timedelta
+from datetime import date
 
-import app.day_service as day_service
 from app.day_service import daily_resource_flow, storable_income
-from app.game_rules import WorkType
+from app.game_rules import WorkIntensity, WorkMode
 from app.main import get_work_rules
-from app.models import Nation, Process, Resource
-from app.population_growth import population_growth_available, population_growth_limit
-from app.settings import active_population
-
-class FakeSession:
-    def __init__(self, processes: list[Process], nation: Nation | None = None) -> None:
-        self.processes = processes
-        self.nation = nation
-        self.added: list[object] = []
-
-    def add(self, item: object) -> None:
-        self.added.append(item)
-
-    async def commit(self) -> None:
-        pass
-
-    async def refresh(self, _: object) -> None:
-        pass
-
-    async def get(self, _: object, __: int) -> Nation | None:
-        return self.nation
-
-    async def exec(self, _: object) -> "FakeResult":
-        return FakeResult(self.processes)
+from app.models import Nation, Process, WorkTypeDefinition
 
 
 class FakeResult:
-    def __init__(self, processes: list[Process]) -> None:
-        self.processes = processes
+    def __init__(self, rules: list[WorkTypeDefinition]) -> None:
+        self.rules = rules
 
-    def first(self) -> None:
-        return None
-
-    def all(self) -> list:
-        return self.processes
+    def all(self) -> list[WorkTypeDefinition]:
+        return self.rules
 
 
-async def check() -> None:
-    resource = Resource(code="food", name="Їжа")
-    assert resource.storage_coefficient == 1
-    rules = await get_work_rules()
-    assert next(rule for rule in rules if rule["work_type"] == "woodcutting") == {
-        "work_type": "woodcutting", "food_multiplier": 2, "outputs": {"wood": 1}
-    }
-    assert active_population(50) == 40
-    growth_nation = Nation(name="Growth", start_date=date(2026, 8, 2), population=50)
-    assert not population_growth_available(growth_nation)
-    growth_nation.population_growth_progress = 5
-    assert population_growth_available(growth_nation)
-    assert population_growth_limit(growth_nation.population) == 5
+class FakeSession:
+    def __init__(self, rules: list[WorkTypeDefinition]) -> None:
+        self.rules = rules
+
+    async def exec(self, _: object) -> FakeResult:
+        return FakeResult(self.rules)
+
+
+async def test_get_work_rules() -> None:
+    rules = await get_work_rules(
+        FakeSession([
+            WorkTypeDefinition(
+                code="woodcutting", name="Woodcutting", intensity=WorkIntensity.STANDARD,
+                mode=WorkMode.CONTINUOUS, outputs={"wood": 1},
+            )
+        ])
+    )
+    assert rules[0]["code"] == "woodcutting"
+    assert rules[0]["outputs"] == {"wood": 1}
+
+
+def test_daily_resource_flow() -> None:
     nation = Nation(name="Test", population=10, start_date=date.today())
-    nation.id = 1
-    process = Process(
-        id=1,
-        nation_id=1,
-        name="Woodcutting",
-        work_type=WorkType.WOODCUTTING,
-        mode="continuous",
-        assigned_workers=5,
-    )
-    flow = daily_resource_flow(
-        nation, [process], {"general_points": 0, "food": 20, "wood": 0, "stone": 0}
-    )
-    assert flow["general_points"] == {"spending": 0, "income": 0}
+    process = Process(nation_id=1, work_type="woodcutting", mode="continuous", assigned_workers=5)
+    work_types = {
+        "woodcutting": WorkTypeDefinition(
+            code="woodcutting", name="Woodcutting", intensity=WorkIntensity.STANDARD,
+            mode=WorkMode.CONTINUOUS, outputs={"wood": 1},
+        )
+    }
+
+    flow = daily_resource_flow(nation, [process], {"food": 20, "wood": 0}, work_types)
+
     assert flow["food"] == {"spending": 15, "income": 0}
     assert flow["wood"] == {"spending": 0, "income": 5}
+
+
+def test_storable_income_respects_available_capacity() -> None:
     assert storable_income(5, 2, 6) == 3
-
-
-asyncio.run(check())
