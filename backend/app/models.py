@@ -109,7 +109,12 @@ class GameItem(SQLModel, table=True):
     code: str = Field(primary_key=True)
     name: str
     image_path: str | None = None
-    visual_type: ItemVisualType = Field(default=ItemVisualType.ICON, sa_column=Column(Enum(ItemVisualType, values_callable=lambda enum: [member.value for member in enum]), nullable=False))
+    visual_type: ItemVisualType = Field(
+        default=ItemVisualType.ICON,
+        sa_column=Column(
+            Enum(ItemVisualType, values_callable=lambda enum: [member.value for member in enum]), nullable=False
+        )
+    )
     description: str = ""
     worker_days: int = Field(default=0, ge=0)
     construction_resources: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
