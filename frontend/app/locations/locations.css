@@ -17,7 +17,7 @@
 
 .locations-map-shell {
   display: grid;
-  grid-template-columns: 0 minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-height: min(680px, calc(100vh - 210px));
   overflow: hidden;
   border: 1px solid var(--bronze);
