@@ -1,12 +1,11 @@
-import os
-
 from alembic import context
 from sqlmodel import SQLModel
 
+from app.config import settings
 from app import models  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+config.set_main_option("sqlalchemy.url", settings.database_url)
 target_metadata = SQLModel.metadata
 
 
@@ -29,4 +28,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

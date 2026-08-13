@@ -1,6 +1,6 @@
 alembic
 fastapi
+pydantic-settings
 psycopg[binary]
 sqlmodel
 uvicorn[standard]
-

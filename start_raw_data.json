@@ -76,13 +76,18 @@
   "buildings": [
     {
       "code": "tent", "name": "Tent", "building_type": "housing", "capacity": 10,
-      "image_path": "/images/buildings/tent.png",
+      "image_path": "/images/buildings/tent.webp",
       "construction_cost": {"resources": {"wood": 15}, "worker_days": 10}
     },
     {
       "code": "warehouse", "name": "Warehouse", "building_type": "warehouse", "capacity": 100,
-      "image_path": "/images/buildings/warehouse.png",
+      "image_path": "/images/buildings/warehouse.webp",
       "construction_cost": {"resources": {"wood": 10}, "worker_days": 5}
+    },
+    {
+      "code": "small_pier", "name": "Small Pier", "building_type": "pier", "capacity": 10,
+      "image_path": "/images/buildings/small_pier.webp",
+      "construction_cost": {"resources": {"wood": 10}, "worker_days": 20}
     }
   ],
 

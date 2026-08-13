@@ -3,11 +3,11 @@ from datetime import date, timedelta
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.config import settings
 from app.game_rules import BuildingType, WorkIntensity
 from app.models import BuildingDefinition, DayReport, Nation, NationBuilding, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.settings import (
     BASE_FOOD_SPENDING,
-    DAY_PROGRESS_MODE,
     HUNGER_STAGE_ONE_DAYS,
     POPULATION_GROWTH_PERCENT,
     POPULATION_GROWTH_REQUIRED_HEALTHY_DAYS,
@@ -16,7 +16,7 @@ from app.settings import (
 
 
 async def nation_current_day(session: AsyncSession, nation: Nation) -> int:
-    if DAY_PROGRESS_MODE != "reload":
+    if settings.day_progress_mode != "reload":
         return (date.today() - nation.start_date).days + 1
     result = await session.exec(select(DayReport.id).where(DayReport.nation_id == nation.id))
     return len(result.all()) + 1
@@ -236,7 +236,7 @@ async def sync_nation(
         if last_report is not None
         else nation.start_date
     )
-    if DAY_PROGRESS_MODE == "reload":
+    if settings.day_progress_mode == "reload":
         return [await advance_day(session, nation, next_report_date)] if reload_tick else []
 
     last_completed_date = today - timedelta(days=1)

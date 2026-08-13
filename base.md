@@ -16,14 +16,15 @@ Work Resources:
 - settings.js
 - settings.py
 - start_raw_data.json
+- config.py
 
 ---
-- [ ] Загальна компоновка, UI/UX
-	- [ ] блоки, кнопки, популяція
-- [ ] Загальні стилі:
-	- [ ] базові наявні іконки
-	- [ ] кольорові гами
-	- [ ] форми кнопок, елементів
+- [x] Загальна компоновка, UI/UX
+	- [x] блоки, кнопки, популяція
+- [x] Загальні стилі:
+	- [x] базові наявні іконки
+	- [x] кольорові гами
+	- [x] форми кнопок, елементів
 
 
 - [x] Personal Task Archive - для періодичних тасок  
@@ -89,8 +90,10 @@ Work Resources:
   - ...
 
 ---
+### System
 
-- [] Use pydentic / pydentic settings
+- [x] Use pydentic / pydentic settings
+- [x] .env
 
 
 Pagination:
