@@ -26,13 +26,13 @@ def daily_resource_flow(
     nation: Nation,
     processes: list[Process],
     resource_amounts: dict[str, float],
-    work_types: dict[int, WorkTypeDefinition],
+    work_types: dict[str, WorkTypeDefinition],
 ) -> dict[str, dict[str, float]]:
     income = {code: 0 for code in resource_amounts}
     food_spending = 0.0
     assigned_workers = 0
     for process in processes:
-        work_type = work_types[process.work_type_id]
+        work_type = work_types[process.work_type]
         workers = process.assigned_workers
         assigned_workers += workers
         food_spending += workers * BASE_FOOD_SPENDING * work_type.intensity.coefficient
@@ -79,14 +79,14 @@ async def advance_day(
     processes = result.all()
     result = await session.exec(
         select(NationResource, Resource)
-        .join(Resource, NationResource.resource_id == Resource.id)
+        .join(Resource, NationResource.resource_code == Resource.code)
         .where(NationResource.nation_id == nation.id)
-        .order_by(Resource.order, Resource.id)
+        .order_by(Resource.order, Resource.code)
     )
     resource_rows = result.all()
     result = await session.exec(
         select(BuildingDefinition.capacity)
-        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .join(NationBuilding, NationBuilding.building_code == BuildingDefinition.code)
         .where(
             NationBuilding.nation_id == nation.id,
             BuildingDefinition.building_type == BuildingType.WAREHOUSE,
@@ -94,7 +94,7 @@ async def advance_day(
     )
     warehouse_capacity = sum(result.all())
     result = await session.exec(select(WorkTypeDefinition))
-    work_types = {work_type.id: work_type for work_type in result.all()}
+    work_types = {work_type.code: work_type for work_type in result.all()}
     resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
     if sum(process.assigned_workers for process in processes) > active_population(
         nation.population
@@ -105,7 +105,7 @@ async def advance_day(
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
     for process in processes:
-        work_type = work_types[process.work_type_id]
+        work_type = work_types[process.work_type]
         workers = process.assigned_workers
         workers_summary[work_type.code] = workers_summary.get(work_type.code, 0) + workers
         progress_added = 0
@@ -119,11 +119,11 @@ async def advance_day(
             if process.completed_worker_days == process.required_worker_days:
                 process.status = "completed"
                 process.completed_at = report_date
-                building_definition_id = process.details.get("building_definition_id")
-                if building_definition_id is not None:
-                    definition = await session.get(BuildingDefinition, building_definition_id)
+                building_code = process.details.get("building_code")
+                if building_code is not None:
+                    definition = await session.get(BuildingDefinition, building_code)
                     if definition is not None:
-                        session.add(NationBuilding(nation_id=nation.id, location_code=process.location_code, building_definition_id=definition.id, built_at=report_date))
+                        session.add(NationBuilding(nation_id=nation.id, location_code=process.location_code, building_code=definition.code, built_at=report_date))
                         session.add(NationLog(nation_id=nation.id, day=game_day, message=f"Завершено будівництво: {definition.name}", amount=1))
                 discovery_location_code = process.details.get("discovery_location_code")
                 if discovery_location_code is not None:

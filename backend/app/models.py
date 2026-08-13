@@ -8,10 +8,7 @@ from app.game_rules import BuildingType, ItemVisualType, PersonalTaskStatus, Per
 
 
 class Resource(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("code"),)
-
-    id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True)
+    code: str = Field(primary_key=True)
     name: str
     order: int = 0
     storage_coefficient: float = 1
@@ -20,10 +17,7 @@ class Resource(SQLModel, table=True):
 
 
 class WorkTypeDefinition(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("code"),)
-
-    id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True)
+    code: str = Field(primary_key=True)
     name: str
     intensity: WorkIntensity
     mode: str
@@ -37,10 +31,7 @@ class WorkTypeDefinition(SQLModel, table=True):
 
 
 class BuildingDefinition(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("code"),)
-
-    id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True)
+    code: str = Field(primary_key=True)
     name: str
     building_type: str
     capacity: int = 0
@@ -171,11 +162,11 @@ class NationLog(SQLModel, table=True):
 
 
 class NationResource(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("nation_id", "resource_id"),)
+    __table_args__ = (UniqueConstraint("nation_id", "resource_code"),)
 
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
-    resource_id: int = Field(foreign_key="resource.id", index=True)
+    resource_code: str = Field(foreign_key="resource.code", index=True)
     amount: float = 0
 
 
@@ -183,7 +174,7 @@ class NationBuilding(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
     location_code: str = Field(foreign_key="location.code", index=True)
-    building_definition_id: int = Field(foreign_key="buildingdefinition.id", index=True)
+    building_code: str = Field(foreign_key="buildingdefinition.code", index=True)
     built_at: date = Field(default_factory=date.today)
 
 
@@ -201,7 +192,7 @@ class Process(SQLModel, table=True):
     location_code: str | None = Field(default=None, foreign_key="location.code", index=True)
     nation_building_id: int | None = Field(default=None, foreign_key="nationbuilding.id", index=True)
     nation_item_id: int | None = Field(default=None, foreign_key="nationitem.id", index=True)
-    work_type_id: int = Field(foreign_key="worktypedefinition.id", index=True)
+    work_type: str = Field(foreign_key="worktypedefinition.code", index=True)
     description: str = ""
     mode: str
     status: str = "active"

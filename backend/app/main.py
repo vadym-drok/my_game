@@ -43,7 +43,7 @@ app.add_middleware(
 async def building_capacity(session: AsyncSession, nation_id: int, building_type: BuildingType) -> int:
     result = await session.exec(
         select(BuildingDefinition.capacity)
-        .join(NationBuilding, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .join(NationBuilding, NationBuilding.building_code == BuildingDefinition.code)
         .where(NationBuilding.nation_id == nation_id, BuildingDefinition.building_type == building_type)
     )
     return sum(result.all())
@@ -63,7 +63,7 @@ async def validate_building_slot(session: AsyncSession, nation_id: int, location
         return
     result = await session.exec(
         select(NationBuilding.id)
-        .join(BuildingDefinition, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .join(BuildingDefinition, NationBuilding.building_code == BuildingDefinition.code)
         .where(
             NationBuilding.nation_id == nation_id,
             NationBuilding.location_code == location_code,
@@ -80,27 +80,27 @@ async def validate_building_slot(session: AsyncSession, nation_id: int, location
         )
     )
     for process in result.all():
-        building_id = process.details.get("building_definition_id")
-        pending_definition = await session.get(BuildingDefinition, building_id) if building_id else None
+        building_code = process.details.get("building_code")
+        pending_definition = await session.get(BuildingDefinition, building_code) if building_code else None
         if pending_definition and pending_definition.building_type == definition.building_type:
             raise HTTPException(status_code=422, detail=f"Location already has a {definition.building_type} building under construction")
 
 
 @app.get("/resources")
 async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    result = await session.exec(select(Resource).order_by(Resource.order, Resource.id))
+    result = await session.exec(select(Resource).order_by(Resource.order, Resource.code))
     return [item.model_dump() for item in result.all()]
 
 
 @app.get("/work-rules")
 async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.id))
+    result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.code))
     return [item.model_dump() for item in result.all()]
 
 
 @app.get("/buildings")
 async def list_building_definitions(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.id))
+    result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.code))
     return [item.model_dump() for item in result.all()]
 
 
@@ -177,7 +177,7 @@ async def list_nation_items(nation_id: int, session: AsyncSession = Depends(get_
 async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(
         select(NationBuilding, BuildingDefinition)
-        .join(BuildingDefinition, NationBuilding.building_definition_id == BuildingDefinition.id)
+        .join(BuildingDefinition, NationBuilding.building_code == BuildingDefinition.code)
         .where(NationBuilding.nation_id == nation_id)
         .order_by(NationBuilding.id.desc())
     )
@@ -195,7 +195,7 @@ async def build(nation_id: int, code: str, data: BuildingAdd, session: AsyncSess
         raise HTTPException(status_code=404, detail="Building not found")
     await validate_building_location(session, nation_id, data.location_code, code)
     await validate_building_slot(session, nation_id, data.location_code, definition)
-    building = NationBuilding(nation_id=nation_id, location_code=data.location_code, building_definition_id=definition.id)
+    building = NationBuilding(nation_id=nation_id, location_code=data.location_code, building_code=definition.code)
     session.add(building)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
     await session.commit()
@@ -232,7 +232,7 @@ async def start_construction(
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
     result = await session.exec(
         select(NationResource, Resource)
-        .join(Resource, NationResource.resource_id == Resource.id)
+        .join(Resource, NationResource.resource_code == Resource.code)
         .where(NationResource.nation_id == nation_id)
     )
     nation_resources = {resource.code: (nation_resource, resource) for nation_resource, resource in result.all()}
@@ -252,12 +252,12 @@ async def start_construction(
     process = Process(
         nation_id=nation_id,
         location_code=data.location_code,
-        work_type_id=work_type.id,
+        work_type=work_type.code,
         mode=WorkMode.FINITE,
         assigned_workers=data.assigned_workers,
         required_worker_days=worker_days,
-        outputs={"building": {"id": definition.id, "name": definition.name}},
-        details={"building_definition_id": definition.id, "construction_cost": cost},
+        outputs={"building": {"code": definition.code, "name": definition.name}},
+        details={"building_code": definition.code, "construction_cost": cost},
     )
     session.add(process)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Розпочато будівництво: {definition.name}", amount=0))
@@ -271,7 +271,7 @@ async def remove_building(nation_id: int, building_id: int, session: AsyncSessio
     building = await session.get(NationBuilding, building_id)
     if building is None or building.nation_id != nation_id:
         raise HTTPException(status_code=404, detail="Built building not found")
-    definition = await session.get(BuildingDefinition, building.building_definition_id)
+    definition = await session.get(BuildingDefinition, building.building_code)
     nation = await session.get(Nation, nation_id)
     await session.delete(building)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Прибрано будівлю: {definition.name if definition else building_id}", amount=-1))
@@ -293,7 +293,7 @@ async def create_nation(
         session.add(
             NationResource(
                 nation_id=nation.id,
-                resource_id=resource.id,
+                resource_code=resource.code,
                 amount=data.resources.get(resource.code, 0),
             )
         )
@@ -325,13 +325,13 @@ async def get_nation(
     process_rows = list(result.all())
     result = await session.exec(
         select(NationResource, Resource)
-        .join(Resource, NationResource.resource_id == Resource.id)
+        .join(Resource, NationResource.resource_code == Resource.code)
         .where(NationResource.nation_id == nation_id)
-        .order_by(Resource.order, Resource.id)
+        .order_by(Resource.order, Resource.code)
     )
     resource_rows = result.all()
     result = await session.exec(select(WorkTypeDefinition))
-    work_types = {work_type.id: work_type for work_type in result.all()}
+    work_types = {work_type.code: work_type for work_type in result.all()}
     housing_capacity = await building_capacity(session, nation_id, BuildingType.HOUSING)
     warehouse_capacity = await building_capacity(session, nation_id, BuildingType.WAREHOUSE)
     storage_used = sum(
@@ -427,7 +427,7 @@ async def adjust_resource(
     result = await session.exec(
         select(NationResource).where(
             NationResource.nation_id == nation_id,
-            NationResource.resource_id == resource_definition.id,
+            NationResource.resource_code == resource_definition.code,
         )
     )
     nation_resource = result.first()
@@ -467,7 +467,7 @@ async def purchase_resources(
         raise HTTPException(status_code=422, detail="Choose at least one resource")
     result = await session.exec(
         select(NationResource, Resource)
-        .join(Resource, NationResource.resource_id == Resource.id)
+        .join(Resource, NationResource.resource_code == Resource.code)
         .where(NationResource.nation_id == nation_id)
     )
     resources = {resource.code: (nation_resource, resource) for nation_resource, resource in result.all()}
@@ -563,7 +563,7 @@ async def create_process(
         > active_population(nation.population)
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
-    process = Process(nation_id=nation_id, **data.model_dump(exclude={"work_type"}) | {"work_type_id": work_type.id, "mode": mode})
+    process = Process(nation_id=nation_id, **data.model_dump() | {"work_type": work_type.code, "mode": mode})
     session.add(process)
     await session.commit()
     await session.refresh(process)
@@ -604,7 +604,7 @@ async def start_location_discovery(
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
     if location.worker_days < 1:
         raise HTTPException(status_code=422, detail="Location requires worker days")
-    process = Process(nation_id=nation_id, location_code=location_code, work_type_id=work_type.id, mode=WorkMode.FINITE, assigned_workers=data.assigned_workers, required_worker_days=location.worker_days, details={"discovery_location_code": location_code})
+    process = Process(nation_id=nation_id, location_code=location_code, work_type=work_type.code, mode=WorkMode.FINITE, assigned_workers=data.assigned_workers, required_worker_days=location.worker_days, details={"discovery_location_code": location_code})
     session.add(process)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Розпочато відкриття локації: {location.name}", amount=0))
     await session.commit()
@@ -618,11 +618,11 @@ async def list_processes(
 ) -> list[dict]:
     result = await session.exec(
         select(Process, WorkTypeDefinition)
-        .join(WorkTypeDefinition, Process.work_type_id == WorkTypeDefinition.id)
+        .join(WorkTypeDefinition, Process.work_type == WorkTypeDefinition.code)
         .where(Process.nation_id == nation_id)
         .order_by(Process.id.desc())
     )
-    return [{**process.model_dump(), "work_type": work_type.code} for process, work_type in result.all()]
+    return [process.model_dump() for process, _ in result.all()]
 
 
 @app.post("/nations/{nation_id}/personal-tasks", response_model=PersonalTask)
@@ -685,7 +685,7 @@ async def update_personal_task(
     else:
         result = await session.exec(
             select(NationResource)
-            .join(Resource, NationResource.resource_id == Resource.id)
+            .join(Resource, NationResource.resource_code == Resource.code)
             .where(NationResource.nation_id == task.nation_id, Resource.code == "general_points")
         )
         points = result.first()
