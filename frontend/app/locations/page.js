@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8010";
 
 function LocationNode({ data }) {
   const positions = [Position.Top, Position.Right, Position.Bottom, Position.Left];
-  return <div className={`location-map-node ${data.editing ? "is-editing" : ""}`} title={data.description}>
+  return <div className={`location-map-node ${data.editing ? "is-editing" : ""} ${data.discovered ? "is-discovered" : ""}`} title={data.description}>
     {positions.map((position) => <span key={position} className={`location-map-marker location-map-handle-${position}`} aria-hidden="true" />)}
     {positions.map((position) => <Handle key={position} id={position} className={`location-map-handle location-map-handle-${position}`} type="source" position={position} isConnectable={data.editing} />)}
     {data.imagePath ? <img src={data.imagePath} alt="" /> : <span className="location-map-art-slot" aria-hidden="true" />}
@@ -26,7 +26,7 @@ function LocationNode({ data }) {
 const nodeTypes = { location: LocationNode };
 
 function toNode(location, position, editing) {
-  return { id: location.code, type: "location", position, data: { name: location.name, description: location.description, imagePath: location.image_path, editing } };
+  return { id: location.code, type: "location", position, data: { name: location.name, description: location.description, imagePath: location.image_path, editing, discovered: location.is_discovered } };
 }
 
 function closestHandle(from, to) {

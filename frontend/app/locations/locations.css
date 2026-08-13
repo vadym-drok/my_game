@@ -137,6 +137,12 @@
   box-shadow: inset 0 0 0 3px #ead9b566, var(--shadow-inset);
 }
 
+.location-map-node.is-discovered img,
+.location-map-node.is-discovered .location-map-art-slot {
+  border-color: #4f7d3b;
+  box-shadow: 0 0 0 2px #7db75a99, 0 2px 3px #33210e66;
+}
+
 .location-map-node strong {
   max-width: 150px;
   padding: 2px 5px;

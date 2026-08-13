@@ -95,7 +95,7 @@
     {
       "code": "starting_bay",
       "name": "Starting Bay",
-      "image_path": null,
+      "image_path": "/images/locations/starting_bay.webp",
       "description": "The sheltered bay where the ship first made landfall.",
       "is_discovered": true,
       "worker_days": 0,
@@ -105,7 +105,7 @@
     {
       "code": "forest",
       "name": "Forest",
-      "image_path": null,
+      "image_path": "/images/locations/forest.webp",
       "description": "A dense forest rich with timber and wild food.",
       "is_discovered": false,
       "worker_days": 3,
@@ -115,7 +115,7 @@
     {
       "code": "high_hill",
       "name": "High Hill",
-      "image_path": null,
+      "image_path": "/images/locations/high_hill.webp",
       "description": "A steep, high hill that rises almost like a small mountain.",
       "is_discovered": false,
       "worker_days": 3,
@@ -125,7 +125,7 @@
     {
       "code": "riverbank",
       "name": "Riverbank",
-      "image_path": null,
+      "image_path": "/images/locations/riverbank.webp",
       "description": "The fertile banks along the river.",
       "is_discovered": false,
       "worker_days": 3,
