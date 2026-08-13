@@ -182,6 +182,7 @@ class NationItem(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
     nation_building_id: int | None = Field(default=None, foreign_key="nationbuilding.id", index=True)
+    process_id: int | None = Field(default=None, foreign_key="process.id", index=True)
     game_item_code: str = Field(foreign_key="gameitem.code", index=True)
     built_at: date = Field(default_factory=date.today)
 
@@ -191,7 +192,6 @@ class Process(SQLModel, table=True):
     nation_id: int = Field(foreign_key="nation.id", index=True)
     location_code: str | None = Field(default=None, foreign_key="location.code", index=True)
     nation_building_id: int | None = Field(default=None, foreign_key="nationbuilding.id", index=True)
-    nation_item_id: int | None = Field(default=None, foreign_key="nationitem.id", index=True)
     work_type: str = Field(foreign_key="worktypedefinition.code", index=True)
     description: str = ""
     mode: str

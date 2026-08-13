@@ -26,7 +26,6 @@ class ProcessCreate(SQLModel):
     location_code: str
     work_type: str
     nation_building_id: int | None = None
-    nation_item_id: int | None = None
     mode: WorkMode
     description: str = ""
     assigned_workers: int = Field(default=0, ge=0)
