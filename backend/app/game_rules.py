@@ -22,6 +22,7 @@ class BuildingType(StrEnum):
     HOUSING = "housing"
     WAREHOUSE = "warehouse"
     PIER = "pier"
+    PRODUCTION = "production"
 
 
 class ItemVisualType(StrEnum):

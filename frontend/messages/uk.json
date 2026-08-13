@@ -261,12 +261,15 @@
     },
     "buildings": {
       "tent": "Намет",
-      "warehouse": "Склад"
+      "warehouse": "Склад",
+      "small_pier": "Малий причал",
+      "woodcutters_lodge": "Хижа лісорубів"
     },
     "buildingTypes": {
       "housing": "Житло",
       "warehouse": "Склад",
-      "pier": "Причал"
+      "pier": "Причал",
+      "production": "Виробництво"
     }
   }
 }

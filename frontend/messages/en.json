@@ -261,12 +261,15 @@
     },
     "buildings": {
       "tent": "Tent",
-      "warehouse": "Warehouse"
+      "warehouse": "Warehouse",
+      "small_pier": "Small Pier",
+      "woodcutters_lodge": "Woodcutter's Lodge"
     },
     "buildingTypes": {
       "housing": "Housing",
       "warehouse": "Warehouse",
-      "pier": "Pier"
+      "pier": "Pier",
+      "production": "Production"
     }
   }
 }

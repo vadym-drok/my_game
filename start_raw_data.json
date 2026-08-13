@@ -85,9 +85,16 @@
       "construction_cost": {"resources": {"wood": 10}, "worker_days": 5}
     },
     {
-      "code": "small_pier", "name": "Small Pier", "building_type": "pier", "capacity": 10,
+      "code": "small_pier", "name": "Small Pier", "building_type": "pier", "capacity": 0,
       "image_path": "/images/buildings/small_pier.webp",
-      "construction_cost": {"resources": {"wood": 10}, "worker_days": 20}
+      "construction_cost": {"resources": {"wood": 10}, "worker_days": 20},
+      "additional_data": {"boats": {"fishing_boat": 4}}
+    },
+    {
+      "code": "woodcutters_lodge", "name": "Woodcutter's Lodge", "building_type": "production", "capacity": 0,
+      "image_path": "/images/buildings/woodcutters_lodge.webp",
+      "construction_cost": {"resources": {"wood": 20}, "worker_days": 15},
+      "additional_data": {"process": {"woodcutting": {"multiplier": 2, "workers": 6}}}
     }
   ],
 
@@ -111,7 +118,7 @@
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "hunting", "woodcutting", "food_gathering"],
-      "buildings": ["tent", "warehouse"],
+      "buildings": ["tent", "warehouse", "woodcutters_lodge"],
       "neighbors": ["starting_bay", "high_hill", "riverbank"]
     },
     {

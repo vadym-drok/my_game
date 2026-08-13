@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import JSON, Column, Enum, UniqueConstraint
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 from app.game_rules import BuildingType, ItemVisualType, PersonalTaskStatus, PersonalTaskType, WorkIntensity, WorkMode
@@ -46,11 +46,38 @@ class BuildingDefinition(SQLModel, table=True):
     capacity: int = 0
     image_path: str | None = None
     construction_cost: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    additional_data: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
     @field_validator("building_type")
     @classmethod
     def validate_building_type(cls, value: str) -> str:
         return BuildingType(value).value
+
+    @model_validator(mode="after")
+    def validate_additional_data(self) -> "BuildingDefinition":
+        if self.building_type == BuildingType.PIER:
+            boats = self.additional_data.get("boats")
+            if not isinstance(boats, dict) or not boats or any(
+                not isinstance(code, str) or not isinstance(count, int) or isinstance(count, bool) or count < 0
+                for code, count in boats.items()
+            ):
+                raise ValueError("Pier additional_data.boats must be a map of boat codes to non-negative counts")
+        if self.building_type == BuildingType.PRODUCTION:
+            processes = self.additional_data.get("process")
+            if not isinstance(processes, dict) or not processes or any(
+                not isinstance(code, str)
+                or not isinstance(config, dict)
+                or set(config) != {"multiplier", "workers"}
+                or not isinstance(config["multiplier"], (int, float))
+                or isinstance(config["multiplier"], bool)
+                or config["multiplier"] <= 0
+                or not isinstance(config["workers"], int)
+                or isinstance(config["workers"], bool)
+                or config["workers"] < 1
+                for code, config in processes.items()
+            ):
+                raise ValueError("Production additional_data.process entries require positive multiplier and workers")
+        return self
 
 
 class Location(SQLModel, table=True):
