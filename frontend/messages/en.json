@@ -156,6 +156,8 @@
     "construction": "Construction",
     "availableWorkers": "Available workers: {amount}.",
     "workers": "Workers",
+    "location": "Location",
+    "selectLocation": "Choose a location",
     "startConstruction": "Start construction",
     "notEnoughResource": "Not enough resource: {resource}.",
     "missingWorkerDays": "Worker-days are not set for this building.",
@@ -256,7 +258,8 @@
     },
     "buildingTypes": {
       "housing": "Housing",
-      "warehouse": "Warehouse"
+      "warehouse": "Warehouse",
+      "pier": "Pier"
     }
   }
 }

@@ -123,7 +123,7 @@ async def advance_day(
                 if building_definition_id is not None:
                     definition = await session.get(BuildingDefinition, building_definition_id)
                     if definition is not None:
-                        session.add(NationBuilding(nation_id=nation.id, building_definition_id=definition.id, built_at=report_date))
+                        session.add(NationBuilding(nation_id=nation.id, location_code=process.location_code, building_definition_id=definition.id, built_at=report_date))
                         session.add(NationLog(nation_id=nation.id, day=game_day, message=f"Завершено будівництво: {definition.name}", amount=1))
 
         processes_summary.append(

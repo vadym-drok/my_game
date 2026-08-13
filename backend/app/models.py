@@ -75,6 +75,11 @@ class LocationWorkType(SQLModel, table=True):
     work_type_code: str = Field(foreign_key="worktypedefinition.code", primary_key=True)
 
 
+class LocationBuildingDefinition(SQLModel, table=True):
+    location_code: str = Field(foreign_key="location.code", primary_key=True)
+    building_code: str = Field(foreign_key="buildingdefinition.code", primary_key=True)
+
+
 class LocationMapNode(SQLModel, table=True):
     location_code: str = Field(foreign_key="location.code", primary_key=True)
     x: float
@@ -149,6 +154,7 @@ class NationResource(SQLModel, table=True):
 class NationBuilding(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
+    location_code: str = Field(foreign_key="location.code", index=True)
     building_definition_id: int = Field(foreign_key="buildingdefinition.id", index=True)
     built_at: date = Field(default_factory=date.today)
 

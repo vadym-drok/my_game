@@ -21,6 +21,7 @@ class WorkMode(StrEnum):
 class BuildingType(StrEnum):
     HOUSING = "housing"
     WAREHOUSE = "warehouse"
+    PIER = "pier"
 
 
 class ItemVisualType(StrEnum):

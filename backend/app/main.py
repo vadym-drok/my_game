@@ -8,11 +8,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationMapNode, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationBuildingDefinition, LocationMapNode, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
     ConstructionStart,
+    BuildingAdd,
     PopulationGrowth,
     ResourceAdjustment,
     ResourcePurchase,
@@ -47,6 +48,15 @@ async def building_capacity(session: AsyncSession, nation_id: int, building_type
     return sum(result.all())
 
 
+async def validate_building_location(session: AsyncSession, location_code: str, building_code: str) -> None:
+    location = await session.get(Location, location_code)
+    if location is None or not location.is_discovered:
+        raise HTTPException(status_code=422, detail="Location is not discovered")
+    result = await session.exec(select(LocationBuildingDefinition).where(LocationBuildingDefinition.location_code == location_code, LocationBuildingDefinition.building_code == building_code))
+    if result.first() is None:
+        raise HTTPException(status_code=422, detail="Building is not available at this location")
+
+
 @app.get("/resources")
 async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(Resource).order_by(Resource.order, Resource.id))
@@ -73,7 +83,11 @@ async def list_locations(session: AsyncSession = Depends(get_session)) -> list[d
     work_types = {}
     for link in result.all():
         work_types.setdefault(link.location_code, []).append(link.work_type_code)
-    return [{**location.model_dump(), "work_types": work_types.get(location.code, [])} for location in locations]
+    result = await session.exec(select(LocationBuildingDefinition))
+    buildings = {}
+    for link in result.all():
+        buildings.setdefault(link.location_code, []).append(link.building_code)
+    return [{**location.model_dump(), "work_types": work_types.get(location.code, []), "buildings": buildings.get(location.code, [])} for location in locations]
 
 
 @app.get("/locations/map")
@@ -134,11 +148,11 @@ async def list_nation_buildings(nation_id: int, session: AsyncSession = Depends(
         .where(NationBuilding.nation_id == nation_id)
         .order_by(NationBuilding.id.desc())
     )
-    return [{**definition.model_dump(), "id": building.id, "built_at": building.built_at} for building, definition in result.all()]
+    return [{**definition.model_dump(), "id": building.id, "location_code": building.location_code, "built_at": building.built_at} for building, definition in result.all()]
 
 
 @app.post("/nations/{nation_id}/buildings/{code}", response_model=NationBuilding)
-async def build(nation_id: int, code: str, action: str = "add", session: AsyncSession = Depends(get_session)) -> NationBuilding:
+async def build(nation_id: int, code: str, data: BuildingAdd, session: AsyncSession = Depends(get_session)) -> NationBuilding:
     nation = await session.get(Nation, nation_id)
     if nation is None:
         raise HTTPException(status_code=404, detail="Nation not found")
@@ -146,12 +160,10 @@ async def build(nation_id: int, code: str, action: str = "add", session: AsyncSe
     definition = result.first()
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
-    if action not in {"build", "add"}:
-        raise HTTPException(status_code=422, detail="Unknown building action")
-    building = NationBuilding(nation_id=nation_id, building_definition_id=definition.id)
+    await validate_building_location(session, data.location_code, code)
+    building = NationBuilding(nation_id=nation_id, location_code=data.location_code, building_definition_id=definition.id)
     session.add(building)
-    if action == "add":
-        session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
     await session.commit()
     await session.refresh(building)
     return building
@@ -171,6 +183,7 @@ async def start_construction(
     definition = result.first()
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
+    await validate_building_location(session, data.location_code, code)
     cost = definition.construction_cost
     worker_days = cost.get("worker_days", 0)
     if not isinstance(worker_days, int) or worker_days < 1:
@@ -203,6 +216,7 @@ async def start_construction(
             session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Будівництво: {definition.name} — {resource.name}", amount=-amount))
     process = Process(
         nation_id=nation_id,
+        location_code=data.location_code,
         work_type="building",
         mode=WorkMode.FINITE,
         assigned_workers=data.assigned_workers,

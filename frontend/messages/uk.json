@@ -156,6 +156,8 @@
     "construction": "Будівництво",
     "availableWorkers": "Доступно працівників: {amount}.",
     "workers": "Працівники",
+    "location": "Локація",
+    "selectLocation": "Оберіть локацію",
     "startConstruction": "Розпочати",
     "notEnoughResource": "Недостатньо ресурсу: {resource}.",
     "missingWorkerDays": "Для будівлі не задані людино-дні.",
@@ -256,7 +258,8 @@
     },
     "buildingTypes": {
       "housing": "Житло",
-      "warehouse": "Склад"
+      "warehouse": "Склад",
+      "pier": "Причал"
     }
   }
 }

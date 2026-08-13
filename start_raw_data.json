@@ -101,6 +101,7 @@
       "worker_days": 0,
       "requirements": {},
       "work_types": ["building", "fishing"],
+      "buildings": ["tent", "warehouse", "small_pier"],
       "neighbors": ["forest", "riverbank", "high_hill"]
     },
     {
@@ -112,6 +113,7 @@
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "hunting", "woodcutting", "food_gathering"],
+      "buildings": ["tent", "warehouse"],
       "neighbors": ["starting_bay", "high_hill", "riverbank"]
     },
     {
@@ -123,6 +125,7 @@
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "food_gathering",  "mining"],
+      "buildings": ["tent", "warehouse"],
       "neighbors": ["starting_bay", "forest"]
     },
     {
@@ -134,6 +137,7 @@
       "worker_days": 3,
       "requirements": {},
       "work_types": ["investigation", "building", "woodcutting", "fishing"],
+      "buildings": ["tent", "warehouse", "small_pier"],
       "neighbors": ["starting_bay", "forest"]
     }
   ],

@@ -68,7 +68,12 @@ class LocationMapLayoutUpdate(SQLModel):
 
 
 class ConstructionStart(SQLModel):
+    location_code: str
     assigned_workers: int = Field(ge=1)
+
+
+class BuildingAdd(SQLModel):
+    location_code: str
 
 
 class PersonalTaskCreate(SQLModel):
