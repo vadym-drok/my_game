@@ -77,6 +77,10 @@ class BuildingAdd(SQLModel):
     location_code: str
 
 
+class ItemAdd(SQLModel):
+    location_code: str
+
+
 class DiscoveryStart(SQLModel):
     assigned_workers: int = Field(ge=1, le=3)
 

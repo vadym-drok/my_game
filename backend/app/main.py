@@ -14,6 +14,7 @@ from app.schemas import (
     NationCreate,
     ConstructionStart,
     BuildingAdd,
+    ItemAdd,
     DiscoveryStart,
     PopulationGrowth,
     ResourceAdjustment,
@@ -171,6 +172,70 @@ async def list_nation_items(nation_id: int, session: AsyncSession = Depends(get_
         .order_by(NationItem.id.desc())
     )
     return [{**game_item.model_dump(), "id": nation_item.id, "built_at": nation_item.built_at} for nation_item, game_item in result.all()]
+
+
+async def validate_item_location(session: AsyncSession, nation_id: int, location_code: str) -> None:
+    nation_location = await session.get(NationLocation, (nation_id, location_code))
+    if nation_location is None or not nation_location.is_discovered:
+        raise HTTPException(status_code=422, detail="Location is not discovered")
+
+
+@app.post("/nations/{nation_id}/items/{code}", response_model=NationItem)
+async def add_item(nation_id: int, code: str, data: ItemAdd, session: AsyncSession = Depends(get_session)) -> NationItem:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    definition = await session.get(GameItem, code)
+    if definition is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    await validate_item_location(session, nation_id, data.location_code)
+    item = NationItem(nation_id=nation_id, game_item_code=definition.code)
+    session.add(item)
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано предмет: {definition.name}", amount=1))
+    await session.commit()
+    await session.refresh(item)
+    return item
+
+
+@app.post("/nations/{nation_id}/items/{code}/creation", response_model=Process)
+async def start_item_creation(nation_id: int, code: str, data: ConstructionStart, session: AsyncSession = Depends(get_session)) -> Process:
+    nation = await session.get(Nation, nation_id)
+    if nation is None:
+        raise HTTPException(status_code=404, detail="Nation not found")
+    definition = await session.get(GameItem, code)
+    if definition is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    await validate_item_location(session, nation_id, data.location_code)
+    if definition.worker_days < 1:
+        raise HTTPException(status_code=422, detail="Item requires worker_days")
+    if definition.max_workers < 1 or data.assigned_workers > definition.max_workers:
+        raise HTTPException(status_code=422, detail=f"Item supports up to {definition.max_workers} workers")
+    work_type = await session.get(WorkTypeDefinition, "creation")
+    if work_type is None or work_type.mode != WorkMode.FINITE:
+        raise HTTPException(status_code=422, detail="Creation work type is unavailable")
+    active_processes = await session.exec(select(Process).where(Process.nation_id == nation_id, Process.status == "active"))
+    if sum(process.assigned_workers for process in active_processes.all()) + data.assigned_workers > active_population(nation.population):
+        raise HTTPException(status_code=422, detail="Active population limit exceeded")
+    resource_rows = await session.exec(select(NationResource, Resource).join(Resource, NationResource.resource_code == Resource.code).where(NationResource.nation_id == nation_id))
+    nation_resources = {resource.code: (nation_resource, resource) for nation_resource, resource in resource_rows.all()}
+    for resource_code, amount in definition.construction_resources.items():
+        nation_resource, resource = nation_resources.get(resource_code, (None, None))
+        if not isinstance(amount, (int, float)) or amount < 0:
+            raise HTTPException(status_code=422, detail="Invalid creation resource cost")
+        if nation_resource is None or nation_resource.amount < amount:
+            raise HTTPException(status_code=422, detail=f"Not enough resource: {resource.name if resource else resource_code}")
+    for resource_code, amount in definition.construction_resources.items():
+        nation_resource, resource = nation_resources[resource_code]
+        nation_resource.amount -= amount
+        session.add(nation_resource)
+        if amount:
+            session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Створення: {definition.name} — {resource.name}", amount=-amount))
+    process = Process(nation_id=nation_id, location_code=data.location_code, work_type=work_type.code, mode=WorkMode.FINITE, assigned_workers=data.assigned_workers, required_worker_days=definition.worker_days, outputs={"item": {"code": definition.code, "name": definition.name}}, details={"item_code": definition.code, "creation_resources": definition.construction_resources})
+    session.add(process)
+    session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Розпочато створення: {definition.name}", amount=0))
+    await session.commit()
+    await session.refresh(process)
+    return process
 
 
 @app.get("/nations/{nation_id}/buildings")
@@ -531,6 +596,8 @@ async def create_process(
         raise HTTPException(status_code=422, detail="Start investigations from the location map")
     if work_type.code == "building":
         raise HTTPException(status_code=422, detail="Start construction from buildings")
+    if work_type.code == "creation":
+        raise HTTPException(status_code=422, detail="Start item creation from items")
     if data.nation_building_id is not None:
         building = await session.get(NationBuilding, data.nation_building_id)
         if building is None or building.nation_id != nation_id:

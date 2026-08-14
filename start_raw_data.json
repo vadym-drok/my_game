@@ -57,6 +57,11 @@
       "image_path": "/images/work-types/building.webp"
     },
     {
+      "code": "creation", "name": "Creation", "intensity": "LIGHT", "mode": "finite",
+      "outputs": {},
+      "image_path": "/images/work-types/creation.webp"
+    },
+    {
       "code": "investigation", "name": "Investigation", "intensity": "STANDARD", "mode": "finite",
       "outputs": {},
       "image_path": "/images/work-types/investigation.png"
