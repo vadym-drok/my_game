@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import JSON, Column, Enum, UniqueConstraint
-from pydantic import field_validator, model_validator
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from app.game_rules import BuildingType, ItemVisualType, PersonalTaskStatus, PersonalTaskType, WorkIntensity, WorkMode
@@ -44,33 +44,6 @@ class BuildingDefinition(SQLModel, table=True):
     def validate_building_type(cls, value: str) -> str:
         return BuildingType(value).value
 
-    @model_validator(mode="after")
-    def validate_additional_data(self) -> "BuildingDefinition":
-        if self.building_type == BuildingType.PIER:
-            boats = self.additional_data.get("boats")
-            if not isinstance(boats, dict) or not boats or any(
-                not isinstance(code, str) or not isinstance(count, int) or isinstance(count, bool) or count < 0
-                for code, count in boats.items()
-            ):
-                raise ValueError("Pier additional_data.boats must be a map of boat codes to non-negative counts")
-        if self.building_type == BuildingType.PRODUCTION:
-            processes = self.additional_data.get("process")
-            if not isinstance(processes, dict) or not processes or any(
-                not isinstance(code, str)
-                or not isinstance(config, dict)
-                or set(config) != {"multiplier", "workers"}
-                or not isinstance(config["multiplier"], (int, float))
-                or isinstance(config["multiplier"], bool)
-                or config["multiplier"] <= 0
-                or not isinstance(config["workers"], int)
-                or isinstance(config["workers"], bool)
-                or config["workers"] < 1
-                for code, config in processes.items()
-            ):
-                raise ValueError("Production additional_data.process entries require positive multiplier and workers")
-        return self
-
-
 class Location(SQLModel, table=True):
     code: str = Field(primary_key=True)
     name: str
@@ -97,6 +70,25 @@ class LocationWorkType(SQLModel, table=True):
 class LocationBuildingDefinition(SQLModel, table=True):
     location_code: str = Field(foreign_key="location.code", primary_key=True)
     building_code: str = Field(foreign_key="buildingdefinition.code", primary_key=True)
+
+
+class WorkTypeItemRequirement(SQLModel, table=True):
+    work_type_code: str = Field(foreign_key="worktypedefinition.code", primary_key=True)
+    item_code: str = Field(foreign_key="gameitem.code", primary_key=True)
+    quantity: int = Field(ge=1)
+
+
+class BuildingWorkTypeCapability(SQLModel, table=True):
+    building_code: str = Field(foreign_key="buildingdefinition.code", primary_key=True)
+    work_type_code: str = Field(foreign_key="worktypedefinition.code", primary_key=True)
+    output_multiplier: float | None = Field(default=None, gt=0)
+    max_workers: int | None = Field(default=None, ge=1)
+
+
+class BuildingItemCapability(SQLModel, table=True):
+    building_code: str = Field(foreign_key="buildingdefinition.code", primary_key=True)
+    item_code: str = Field(foreign_key="gameitem.code", primary_key=True)
+    capacity: int = Field(ge=0)
 
 
 class NationLocation(SQLModel, table=True):
@@ -187,7 +179,6 @@ class NationItem(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nation_id: int = Field(foreign_key="nation.id", index=True)
     nation_building_id: int | None = Field(default=None, foreign_key="nationbuilding.id", index=True)
-    process_id: int | None = Field(default=None, foreign_key="process.id", index=True)
     game_item_code: str = Field(foreign_key="gameitem.code", index=True)
     built_at: date = Field(default_factory=date.today)
 
@@ -208,6 +199,11 @@ class Process(SQLModel, table=True):
     completed_at: date | None = None
     outputs: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
     details: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+
+
+class ProcessNationItem(SQLModel, table=True):
+    process_id: int = Field(foreign_key="process.id", primary_key=True)
+    nation_item_id: int = Field(foreign_key="nationitem.id", primary_key=True)
 
 
 class PersonalTask(SQLModel, table=True):

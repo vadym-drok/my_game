@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.day_service import daily_resource_flow, nation_current_day, sync_nation
 from app.db import get_session
 from app.game_rules import BuildingType, PersonalTaskStatus, WorkMode
-from app.models import BuildingDefinition, DayReport, GameItem, Location, LocationBuildingDefinition, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLocation, NationLog, NationResource, PersonalTask, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, BuildingItemCapability, BuildingWorkTypeCapability, DayReport, GameItem, Location, LocationBuildingDefinition, LocationNeighbor, LocationWorkType, Nation, NationBuilding, NationItem, NationLocation, NationLog, NationResource, PersonalTask, Process, ProcessNationItem, Resource, WorkTypeDefinition, WorkTypeItemRequirement
 from app.population_growth import population_growth_available, population_growth_limit
 from app.schemas import (
     NationCreate,
@@ -59,34 +59,6 @@ async def validate_building_location(session: AsyncSession, nation_id: int, loca
         raise HTTPException(status_code=422, detail="Building is not available at this location")
 
 
-async def validate_building_slot(session: AsyncSession, nation_id: int, location_code: str, definition: BuildingDefinition) -> None:
-    if definition.building_type not in (BuildingType.PIER, BuildingType.PRODUCTION):
-        return
-    result = await session.exec(
-        select(NationBuilding.id)
-        .join(BuildingDefinition, NationBuilding.building_code == BuildingDefinition.code)
-        .where(
-            NationBuilding.nation_id == nation_id,
-            NationBuilding.location_code == location_code,
-            BuildingDefinition.building_type == definition.building_type,
-        )
-    )
-    if result.first() is not None:
-        raise HTTPException(status_code=422, detail=f"Location already has a {definition.building_type} building")
-    result = await session.exec(
-        select(Process).where(
-            Process.nation_id == nation_id,
-            Process.location_code == location_code,
-            Process.status == "active",
-        )
-    )
-    for process in result.all():
-        building_code = process.details.get("building_code")
-        pending_definition = await session.get(BuildingDefinition, building_code) if building_code else None
-        if pending_definition and pending_definition.building_type == definition.building_type:
-            raise HTTPException(status_code=422, detail=f"Location already has a {definition.building_type} building under construction")
-
-
 @app.get("/resources")
 async def list_resources(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(Resource).order_by(Resource.order, Resource.code))
@@ -96,13 +68,27 @@ async def list_resources(session: AsyncSession = Depends(get_session)) -> list[d
 @app.get("/work-rules")
 async def get_work_rules(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(WorkTypeDefinition).order_by(WorkTypeDefinition.code))
-    return [item.model_dump() for item in result.all()]
+    work_types = result.all()
+    result = await session.exec(select(WorkTypeItemRequirement))
+    requirements: dict[str, list[dict]] = {}
+    for requirement in result.all():
+        requirements.setdefault(requirement.work_type_code, []).append(requirement.model_dump())
+    return [{**item.model_dump(), "item_requirements": requirements.get(item.code, [])} for item in work_types]
 
 
 @app.get("/buildings")
 async def list_building_definitions(session: AsyncSession = Depends(get_session)) -> list[dict]:
     result = await session.exec(select(BuildingDefinition).order_by(BuildingDefinition.code))
-    return [item.model_dump() for item in result.all()]
+    buildings = result.all()
+    result = await session.exec(select(BuildingWorkTypeCapability))
+    work_capabilities: dict[str, list[dict]] = {}
+    for capability in result.all():
+        work_capabilities.setdefault(capability.building_code, []).append(capability.model_dump())
+    result = await session.exec(select(BuildingItemCapability))
+    item_capabilities: dict[str, list[dict]] = {}
+    for capability in result.all():
+        item_capabilities.setdefault(capability.building_code, []).append(capability.model_dump())
+    return [{**item.model_dump(), "work_type_capabilities": work_capabilities.get(item.code, []), "item_capabilities": item_capabilities.get(item.code, [])} for item in buildings]
 
 
 @app.get("/nations/{nation_id}/locations")
@@ -259,7 +245,6 @@ async def build(nation_id: int, code: str, data: BuildingAdd, session: AsyncSess
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
     await validate_building_location(session, nation_id, data.location_code, code)
-    await validate_building_slot(session, nation_id, data.location_code, definition)
     building = NationBuilding(nation_id=nation_id, location_code=data.location_code, building_code=definition.code)
     session.add(building)
     session.add(NationLog(nation_id=nation_id, day=await nation_current_day(session, nation), message=f"Додано будівлю: {definition.name}", amount=1))
@@ -283,7 +268,6 @@ async def start_construction(
     if definition is None:
         raise HTTPException(status_code=404, detail="Building not found")
     await validate_building_location(session, nation_id, data.location_code, code)
-    await validate_building_slot(session, nation_id, data.location_code, definition)
     cost = definition.construction_cost
     worker_days = cost.get("worker_days", 0)
     if not isinstance(worker_days, int) or worker_days < 1:
@@ -598,16 +582,55 @@ async def create_process(
         raise HTTPException(status_code=422, detail="Start construction from buildings")
     if work_type.code == "creation":
         raise HTTPException(status_code=422, detail="Start item creation from items")
+    building = None
+    capability = None
     if data.nation_building_id is not None:
         building = await session.get(NationBuilding, data.nation_building_id)
         if building is None or building.nation_id != nation_id:
             raise HTTPException(status_code=422, detail="Nation building not found")
+        if building.location_code != data.location_code:
+            raise HTTPException(status_code=422, detail="Nation building is not at this location")
+        capability = await session.get(BuildingWorkTypeCapability, (building.building_code, data.work_type))
+        if capability is None:
+            raise HTTPException(status_code=422, detail="Building does not support this work type")
     nation_location = await session.get(NationLocation, (nation_id, data.location_code))
     if nation_location is None or not nation_location.is_discovered:
         raise HTTPException(status_code=422, detail="Location is not discovered")
     result = await session.exec(select(LocationWorkType).where(LocationWorkType.location_code == data.location_code, LocationWorkType.work_type_code == data.work_type))
     if result.first() is None:
         raise HTTPException(status_code=422, detail="Work type is not available at this location")
+    if len(data.nation_item_ids) != len(set(data.nation_item_ids)):
+        raise HTTPException(status_code=422, detail="Nation items must not be repeated")
+    nation_items = []
+    for item_id in data.nation_item_ids:
+        item = await session.get(NationItem, item_id)
+        if item is None or item.nation_id != nation_id:
+            raise HTTPException(status_code=422, detail="Nation item not found")
+        nation_items.append(item)
+    result = await session.exec(select(WorkTypeItemRequirement).where(WorkTypeItemRequirement.work_type_code == data.work_type))
+    requirements = result.all()
+    selected_counts: dict[str, int] = {}
+    for item in nation_items:
+        selected_counts[item.game_item_code] = selected_counts.get(item.game_item_code, 0) + 1
+    for requirement in requirements:
+        if selected_counts.get(requirement.item_code, 0) < requirement.quantity:
+            raise HTTPException(status_code=422, detail=f"Work type requires {requirement.quantity} {requirement.item_code}")
+    if building is not None:
+        result = await session.exec(select(BuildingItemCapability).where(BuildingItemCapability.building_code == building.building_code))
+        item_capabilities = {link.item_code: link.capacity for link in result.all()}
+        active_item_ids = (await session.exec(
+            select(ProcessNationItem.nation_item_id)
+            .join(Process, ProcessNationItem.process_id == Process.id)
+            .where(Process.nation_building_id == building.id, Process.status == "active")
+        )).all()
+        active_items = [await session.get(NationItem, item_id) for item_id in active_item_ids]
+        active_counts: dict[str, int] = {}
+        for item in active_items + nation_items:
+            if item is not None:
+                active_counts[item.game_item_code] = active_counts.get(item.game_item_code, 0) + 1
+        for item_code, count in active_counts.items():
+            if item_code in item_capabilities and count > item_capabilities[item_code]:
+                raise HTTPException(status_code=422, detail=f"Building capacity exceeded for {item_code}")
     mode = data.mode if work_type.code == "other" else WorkMode(work_type.mode)
     if mode == WorkMode.FINITE and data.required_worker_days is None:
         raise HTTPException(
@@ -628,8 +651,12 @@ async def create_process(
         > active_population(nation.population)
     ):
         raise HTTPException(status_code=422, detail="Active population limit exceeded")
-    process = Process(nation_id=nation_id, **data.model_dump() | {"work_type": work_type.code, "mode": mode})
+    if capability is not None and capability.max_workers is not None and data.assigned_workers > capability.max_workers:
+        raise HTTPException(status_code=422, detail=f"Building supports up to {capability.max_workers} workers")
+    process = Process(nation_id=nation_id, **data.model_dump(exclude={"nation_item_ids"}) | {"work_type": work_type.code, "mode": mode})
     session.add(process)
+    await session.flush()
+    session.add_all([ProcessNationItem(process_id=process.id, nation_item_id=item.id) for item in nation_items])
     await session.commit()
     await session.refresh(process)
     return process
@@ -687,7 +714,18 @@ async def list_processes(
         .where(Process.nation_id == nation_id)
         .order_by(Process.id.desc())
     )
-    return [process.model_dump() for process, _ in result.all()]
+    processes = [process for process, _ in result.all()]
+    process_ids = [process.id for process in processes]
+    result = await session.exec(select(ProcessNationItem).where(ProcessNationItem.process_id.in_(process_ids))) if process_ids else None
+    items: dict[int, list[int]] = {}
+    if result is not None:
+        for link in result.all():
+            items.setdefault(link.process_id, []).append(link.nation_item_id)
+    result = await session.exec(select(NationBuilding).where(NationBuilding.nation_id == nation_id))
+    building_codes = {building.id: building.building_code for building in result.all()}
+    result = await session.exec(select(BuildingWorkTypeCapability))
+    capabilities = {(capability.building_code, capability.work_type_code): capability for capability in result.all()}
+    return [{**process.model_dump(), "nation_item_ids": items.get(process.id, []), "output_multiplier": (capabilities.get((building_codes.get(process.nation_building_id), process.work_type)).output_multiplier or 1) if process.nation_building_id in building_codes and (building_codes[process.nation_building_id], process.work_type) in capabilities else 1} for process in processes]
 
 
 @app.post("/nations/{nation_id}/personal-tasks", response_model=PersonalTask)

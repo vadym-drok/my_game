@@ -20,6 +20,9 @@ class FakeSession:
         self.rules = rules
 
     async def exec(self, _: object) -> FakeResult:
+        if getattr(self, "called", False):
+            return FakeResult([])
+        self.called = True
         return FakeResult(self.rules)
 
 
@@ -50,6 +53,16 @@ def test_daily_resource_flow() -> None:
 
     assert flow["food"] == {"spending": 15, "income": 0}
     assert flow["wood"] == {"spending": 0, "income": 5}
+
+
+def test_daily_resource_flow_uses_building_multiplier() -> None:
+    nation = Nation(name="Test", population=2)
+    process = Process(id=1, nation_id=1, work_type="woodcutting", mode="continuous", assigned_workers=2)
+    work_type = WorkTypeDefinition(code="woodcutting", name="Woodcutting", intensity=WorkIntensity.STANDARD, mode=WorkMode.CONTINUOUS, outputs={"wood": 1})
+
+    flow = daily_resource_flow(nation, [process], {"food": 20, "wood": 0}, {"woodcutting": work_type}, {1: 2})
+
+    assert flow["wood"] == {"spending": 0, "income": 4}
 
 
 def test_storable_income_respects_available_capacity() -> None:

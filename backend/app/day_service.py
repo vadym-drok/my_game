@@ -5,7 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.game_rules import BuildingType, WorkIntensity
-from app.models import BuildingDefinition, DayReport, GameItem, Nation, NationBuilding, NationItem, NationLocation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
+from app.models import BuildingDefinition, BuildingWorkTypeCapability, DayReport, GameItem, Nation, NationBuilding, NationItem, NationLocation, NationLog, NationResource, Process, Resource, WorkTypeDefinition
 from app.settings import (
     BASE_FOOD_SPENDING,
     HUNGER_STAGE_ONE_DAYS,
@@ -27,6 +27,7 @@ def daily_resource_flow(
     processes: list[Process],
     resource_amounts: dict[str, float],
     work_types: dict[str, WorkTypeDefinition],
+    output_multipliers: dict[int, float] | None = None,
 ) -> dict[str, dict[str, float]]:
     income = {code: 0 for code in resource_amounts}
     food_spending = 0.0
@@ -38,7 +39,7 @@ def daily_resource_flow(
         food_spending += workers * BASE_FOOD_SPENDING * work_type.intensity.coefficient
         if process.mode == "continuous":
             for resource, amount in work_type.outputs.items():
-                income[resource] = income.get(resource, 0) + workers * amount
+                income[resource] = income.get(resource, 0) + workers * amount * (output_multipliers or {}).get(process.id or 0, 1)
 
     food_spending += (
         (nation.population - assigned_workers)
@@ -95,13 +96,23 @@ async def advance_day(
     warehouse_capacity = sum(result.all())
     result = await session.exec(select(WorkTypeDefinition))
     work_types = {work_type.code: work_type for work_type in result.all()}
+    result = await session.exec(select(NationBuilding).where(NationBuilding.nation_id == nation.id))
+    building_codes = {building.id: building.building_code for building in result.all()}
+    result = await session.exec(select(BuildingWorkTypeCapability))
+    capabilities = {(capability.building_code, capability.work_type_code): capability for capability in result.all()}
+    output_multipliers = {
+        process.id: capabilities[(building_codes[process.nation_building_id], process.work_type)].output_multiplier or 1
+        for process in processes
+        if process.nation_building_id in building_codes
+        and (building_codes[process.nation_building_id], process.work_type) in capabilities
+    }
     resource_amounts = {resource.code: nation_resource.amount for nation_resource, resource in resource_rows}
     if sum(process.assigned_workers for process in processes) > active_population(
         nation.population
     ):
         raise ValueError("More workers assigned than the active population")
 
-    resource_flow = daily_resource_flow(nation, processes, resource_amounts, work_types)
+    resource_flow = daily_resource_flow(nation, processes, resource_amounts, work_types, output_multipliers)
     workers_summary: dict[str, int] = {}
     processes_summary: list[dict] = []
     for process in processes:

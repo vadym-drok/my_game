@@ -93,14 +93,24 @@
       "code": "small_pier", "name": "Small Pier", "building_type": "pier", "capacity": 0,
       "image_path": "/images/buildings/small_pier.webp",
       "construction_cost": {"resources": {"wood": 10}, "worker_days": 20},
-      "additional_data": {"boats": {"fishing_boat": 4}}
+      "additional_data": {}
     },
     {
       "code": "woodcutters_lodge", "name": "Woodcutter's Lodge", "building_type": "production", "capacity": 0,
       "image_path": "/images/buildings/woodcutters_lodge.webp",
       "construction_cost": {"resources": {"wood": 20}, "worker_days": 15},
-      "additional_data": {"process": {"woodcutting": {"multiplier": 2, "workers": 6}}}
+      "additional_data": {}
     }
+  ],
+
+  "work_type_item_requirements": [
+    {"work_type_code": "fishing", "item_code": "fishing_boat", "quantity": 1}
+  ],
+  "building_work_type_capabilities": [
+    {"building_code": "woodcutters_lodge", "work_type_code": "woodcutting", "output_multiplier": 2, "max_workers": 6}
+  ],
+  "building_item_capabilities": [
+    {"building_code": "small_pier", "item_code": "fishing_boat", "capacity": 4}
   ],
 
   "locations": [
